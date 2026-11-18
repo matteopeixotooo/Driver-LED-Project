@@ -1,0 +1,1395 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Simulador Web — Controle Digital de Iluminação (Estilo PSIM)</title>
+<style>
+  :root {
+    --bg: #eef2f7;
+    --panel: #ffffff;
+    --panel-alt: #f7f9fc;
+    --border: #cfd8e3;
+    --navy: #14305a;
+    --accent: #1f77b4;
+    --accent-soft: #e7f2fc;
+    --red: #c0392b;
+    --red-soft: #fdeeee;
+    --green: #1e8449;
+    --green-soft: #e8f7ee;
+    --amber: #b9770e;
+    --amber-soft: #fef6e6;
+    --text: #1e242c;
+    --muted: #5f6c7b;
+    --mono: "DejaVu Sans Mono", "Fira Code", Consolas, monospace;
+    --sans: "Noto Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 13px;
+  }
+
+  /* Barra superior estilo software de engenharia */
+  header {
+    background: var(--navy);
+    color: #fff;
+    padding: 10px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.14);
+  }
+  header .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  header .logo {
+    background: #f5b700;
+    color: var(--navy);
+    font-weight: 800;
+    padding: 4px 9px;
+    border-radius: 5px;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+  }
+  header h1 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+  }
+  header .sub {
+    font-size: 11.5px;
+    color: #bfd4ee;
+  }
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .btn {
+    border: 1px solid rgba(255,255,255,0.25);
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+    padding: 6px 12px;
+    border-radius: 5px;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .btn:hover { background: rgba(255,255,255,0.2); }
+  .btn-primary {
+    background: #27ae60;
+    border-color: #219a52;
+  }
+  .btn-primary:hover { background: #219a52; }
+
+  /* Layout principal */
+  .layout {
+    display: grid;
+    grid-template-columns: 330px 1fr;
+    gap: 12px;
+    padding: 12px;
+    max-width: 1680px;
+    margin: 0 auto;
+  }
+  @media (max-width: 1080px) {
+    .layout { grid-template-columns: 1fr; }
+  }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(16,24,40,0.05);
+    overflow: hidden;
+  }
+  .card-header {
+    background: var(--panel-alt);
+    border-bottom: 1px solid var(--border);
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-weight: 700;
+    color: var(--navy);
+    font-size: 12.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+  .card-body { padding: 12px; }
+
+  /* Sidebar de controle */
+  .sidebar { display: flex; flex-direction: column; gap: 12px; }
+  .field { margin-bottom: 10px; }
+  .field:last-child { margin-bottom: 0; }
+  .field label {
+    display: flex;
+    justify-content: space-between;
+    font-weight: 600;
+    font-size: 12px;
+    margin-bottom: 4px;
+    color: var(--text);
+  }
+  .field label span.val {
+    font-family: var(--mono);
+    color: var(--accent);
+  }
+  select, input[type="number"] {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    font-family: var(--sans);
+    font-size: 12.5px;
+    background: #fff;
+  }
+  input[type="range"] {
+    width: 100%;
+    accent-color: var(--accent);
+    cursor: pointer;
+  }
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 5px 0;
+    font-size: 12.5px;
+  }
+  .toggle-row input { cursor: pointer; transform: scale(1.1); }
+
+  .mode-pills {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .mode-pill {
+    text-align: left;
+    padding: 7px 10px;
+    border: 1px solid var(--border);
+    background: var(--panel-alt);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: all 0.12s;
+  }
+  .mode-pill:hover { border-color: var(--accent); background: var(--accent-soft); }
+  .mode-pill.active {
+    background: var(--navy);
+    color: #fff;
+    border-color: var(--navy);
+  }
+  .badge {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 99px;
+    font-weight: 700;
+    background: rgba(255,255,255,0.2);
+  }
+  .mode-pill:not(.active) .badge {
+    background: #e1e8f0;
+    color: var(--navy);
+  }
+
+  /* Área principal (esquemático + osciloscópio) */
+  .main-col { display: flex; flex-direction: column; gap: 12px; }
+
+  .tabs {
+    display: flex;
+    gap: 4px;
+  }
+  .tab-btn {
+    border: 1px solid var(--border);
+    background: #fff;
+    color: var(--muted);
+    padding: 4px 10px;
+    border-radius: 5px;
+    font-size: 11.5px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .tab-btn.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+
+  /* Esquemático SVG estilo PSIM */
+  .schematic-wrap {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 10px;
+    align-items: stretch;
+  }
+  @media (max-width: 1280px) {
+    .schematic-wrap { grid-template-columns: 1fr; }
+  }
+  .svg-stage {
+    background: #fcfdff;
+    background-image:
+      radial-gradient(#cfd8e3 1px, transparent 1px);
+    background-size: 18px 18px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 235px;
+  }
+  .svg-stage svg { width: 100%; height: auto; max-height: 245px; }
+
+  .eq-box {
+    background: var(--panel-alt);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px;
+    font-size: 11.5px;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+  .eq-item {
+    background: #fff;
+    border: 1px solid #dfe6ee;
+    border-radius: 5px;
+    padding: 6px 8px;
+  }
+  .eq-item .lbl {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+  .eq-item .math {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--navy);
+    word-break: break-word;
+    line-height: 1.4;
+  }
+
+  /* KPIs */
+  .kpi-strip {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(120px, 1fr));
+    gap: 8px;
+  }
+  @media (max-width: 900px) {
+    .kpi-strip { grid-template-columns: repeat(2, 1fr); }
+  }
+  .kpi {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
+    border-radius: 6px;
+    padding: 8px 10px;
+  }
+  .kpi.ok { border-left-color: var(--green); background: var(--green-soft); }
+  .kpi.bad { border-left-color: var(--red); background: var(--red-soft); }
+  .kpi.warn { border-left-color: var(--amber); background: var(--amber-soft); }
+  .kpi .k-lbl { font-size: 11px; color: var(--muted); font-weight: 600; }
+  .kpi .k-val { font-size: 18px; font-weight: 800; font-family: var(--mono); margin: 2px 0; }
+  .kpi .k-sub { font-size: 10.5px; color: var(--muted); }
+
+  /* Osciloscópio */
+  .scope-wrap {
+    position: relative;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px;
+  }
+  .scope-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 6px;
+    font-size: 11.5px;
+  }
+  .probe-readout {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    background: #14305a;
+    color: #fff;
+    padding: 4px 10px;
+    border-radius: 5px;
+  }
+  canvas#scopeCanvas {
+    width: 100%;
+    height: 360px;
+    display: block;
+    cursor: crosshair;
+  }
+  .legend-row {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    font-size: 11.5px;
+    color: var(--muted);
+  }
+  .leg-dot {
+    display: inline-block;
+    width: 14px;
+    height: 3px;
+    vertical-align: middle;
+    margin-right: 5px;
+  }
+
+  /* Modal / Código do algoritmo */
+  .code-pre {
+    background: #1c222b;
+    color: #e6edf3;
+    padding: 10px 12px;
+    border-radius: 6px;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    line-height: 1.45;
+    overflow-x: auto;
+    margin: 0;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="logo">PSIM-WEB</div>
+    <div>
+      <h1>Simulador Interativo — Controle Digital de Iluminação</h1>
+      <div class="sub">Planta LED + LDR (2ª ordem) · Integração RK4 (Δt = τ_min/100) · Controlador Polinomial ZOH (h = τ_min/10)</div>
+    </div>
+  </div>
+  <div class="toolbar">
+    <button class="btn btn-primary" onclick="runAll()">▶ Simular</button>
+    <button class="btn" onclick="resetDefaults()">↺ Padrão do Projeto</button>
+    <button class="btn" onclick="exportCSV()">⬇ Exportar CSV</button>
+  </div>
+</header>
+
+<div class="layout">
+  <!-- COLUNA ESQUERDA: PARÂMETROS E MODOS -->
+  <aside class="sidebar">
+
+    <div class="card">
+      <div class="card-header">1. Topologia / Modo de Simulação</div>
+      <div class="card-body">
+        <div class="mode-pills" id="modePills">
+          <button class="mode-pill" data-mode="open_loop">
+            <span>Malha Aberta</span><span class="badge">u = r</span>
+          </button>
+          <button class="mode-pill" data-mode="closed_no_ctrl">
+            <span>Malha Fechada (Sem Controlador)</span><span class="badge">u = r − y</span>
+          </button>
+          <button class="mode-pill" data-mode="closed_try1">
+            <span>Malha Fechada (1ª Tentativa)</span><span class="badge">−18, −30</span>
+          </button>
+          <button class="mode-pill active" data-mode="closed_tuned">
+            <span>Malha Fechada (Ajuste Final)</span><span class="badge">−10, −25</span>
+          </button>
+          <button class="mode-pill" data-mode="closed_custom">
+            <span>Polos Personalizados</span><span class="badge">Livre</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">2. Referência e Ensaio</div>
+      <div class="card-body">
+        <div class="field">
+          <label>Tipo de Referência r(t)</label>
+          <select id="refType" onchange="runAll()">
+            <option value="step">Degrau Único (r₀)</option>
+            <option value="multistep">Múltiplos Degraus (2,0 → 4,0 → 3,0 V)</option>
+            <option value="square">Onda Quadrada (2,0 ↔ 3,5 V)</option>
+          </select>
+        </div>
+        <div class="grid-2">
+          <div class="field">
+            <label>Degrau r₀ [V] <span class="val" id="lblR0">3.0</span></label>
+            <input type="range" id="r0" min="0.5" max="4.5" step="0.1" value="3.0" oninput="syncLabels(); runAll()" />
+          </div>
+          <div class="field">
+            <label>Tempo Total [s] <span class="val" id="lblTmax">1.0</span></label>
+            <input type="range" id="tMax" min="0.5" max="3.0" step="0.1" value="1.0" oninput="syncLabels(); runAll()" />
+          </div>
+        </div>
+        <div class="toggle-row">
+          <span>Sobrepor "Sem Controlador"</span>
+          <input type="checkbox" id="chkGhost" checked onchange="drawScope()" />
+        </div>
+        <div class="toggle-row">
+          <span>Saturação física do driver [0, 5 V]</span>
+          <input type="checkbox" id="chkSat" onchange="runAll()" />
+        </div>
+        <div class="toggle-row">
+          <span>Perturbação externa (+0,5 V em t/2)</span>
+          <input type="checkbox" id="chkDist" onchange="runAll()" />
+        </div>
+        <div class="toggle-row">
+          <span>Zoom nos pulsos ZOH (0 a 80 ms)</span>
+          <input type="checkbox" id="chkZoom" onchange="drawScope()" />
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">3. Parâmetros da Planta (RC / Físicos)</div>
+      <div class="card-body">
+        <div class="field">
+          <label>τ₁ Driver LED [s] (R₁·C₁) <span class="val" id="lblTau1">0.050</span></label>
+          <input type="range" id="tau1" min="0.01" max="0.20" step="0.005" value="0.05" oninput="syncLabels(); runAll()" />
+        </div>
+        <div class="field">
+          <label>τ₂ Sensor LDR [s] (R₂·C₂) <span class="val" id="lblTau2">0.150</span></label>
+          <input type="range" id="tau2" min="0.02" max="0.40" step="0.01" value="0.15" oninput="syncLabels(); runAll()" />
+        </div>
+        <div class="field">
+          <label>Ganho Total K [V/V] <span class="val" id="lblK">4.0</span></label>
+          <input type="range" id="kPlanta" min="0.5" max="8.0" step="0.5" value="4.0" oninput="syncLabels(); runAll()" />
+        </div>
+      </div>
+    </div>
+
+    <div class="card" id="polesCard">
+      <div class="card-header">4. Polos Desejados (Método Polinomial)</div>
+      <div class="card-body">
+        <div class="field">
+          <label>Polos dominantes s₁ = s₂ [rad/s] <span class="val" id="lblPa">-10</span></label>
+          <input type="range" id="poleA" min="-30" max="-3" step="1" value="-10" oninput="onPoleSlider()" />
+        </div>
+        <div class="field">
+          <label>Polos auxiliares s₃ = s₄ [rad/s] <span class="val" id="lblPb">-25</span></label>
+          <input type="range" id="poleB" min="-60" max="-8" step="1" value="-25" oninput="onPoleSlider()" />
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">5. Algoritmo Discreto (C / C Block PSIM)</div>
+      <div class="card-body">
+        <pre class="code-pre" id="algoCode"></pre>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- COLUNA DIREITA: ESQUEMÁTICO + KPIS + OSCILOSCÓPIO -->
+  <main class="main-col">
+
+    <!-- ESQUEMÁTICO -->
+    <div class="card">
+      <div class="card-header">
+        <span>Esquemático do Sistema</span>
+        <div class="tabs">
+          <button class="tab-btn active" id="tabCircuit" onclick="setView('circuit')">Circuito Elétrico (PSIM)</button>
+          <button class="tab-btn" id="tabBlocks" onclick="setView('blocks')">Diagrama de Blocos</button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="schematic-wrap">
+          <div class="svg-stage" id="svgStage"></div>
+          <div class="eq-box">
+            <div class="eq-item">
+              <div class="lbl">Tempos (Regra τ_min)</div>
+              <div class="math" id="eqTimes"></div>
+            </div>
+            <div class="eq-item">
+              <div class="lbl">Planta Contínua G(s)</div>
+              <div class="math" id="eqGs"></div>
+            </div>
+            <div class="eq-item">
+              <div class="lbl">Planta Discreta G(z) — ZOH</div>
+              <div class="math" id="eqGz"></div>
+            </div>
+            <div class="eq-item">
+              <div class="lbl">Controlador C(z) — Polinomial</div>
+              <div class="math" id="eqCz"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- KPIS -->
+    <div class="kpi-strip">
+      <div class="kpi" id="kpiEss">
+        <div class="k-lbl">Erro em Regime (e_ss)</div>
+        <div class="k-val" id="valEss">—</div>
+        <div class="k-sub">Meta: 0 %</div>
+      </div>
+      <div class="kpi" id="kpiPo">
+        <div class="k-lbl">Overshoot (P.O.)</div>
+        <div class="k-val" id="valPo">—</div>
+        <div class="k-sub">Meta: ≤ 5,0 %</div>
+      </div>
+      <div class="kpi" id="kpiTs">
+        <div class="k-lbl">Acomodação Ts(2%)</div>
+        <div class="k-val" id="valTs">—</div>
+        <div class="k-sub">Meta: ≤ 0,30 s</div>
+      </div>
+      <div class="kpi" id="kpiU">
+        <div class="k-lbl">Faixa de Controle u(t)</div>
+        <div class="k-val" id="valU">—</div>
+        <div class="k-sub">Driver: [0,0 ; 5,0] V</div>
+      </div>
+      <div class="kpi" id="kpiStatus">
+        <div class="k-lbl">Diagnóstico</div>
+        <div class="k-val" id="valStatus">—</div>
+        <div class="k-sub" id="subStatus">—</div>
+      </div>
+    </div>
+
+    <!-- OSCILOSCÓPIO SIMVIEW -->
+    <div class="card">
+      <div class="card-header">
+        <span>Osciloscópio — Referência r(t), Saída y(t) e Entrada da Planta u(t)</span>
+        <div class="probe-readout" id="probeReadout">Passe o mouse no gráfico para medir (Probe)</div>
+      </div>
+      <div class="card-body">
+        <div class="scope-wrap">
+          <div class="scope-bar">
+            <div class="legend-row">
+              <span><i class="leg-dot" style="background:#111; border-top:2px dashed #111; height:0;"></i>Referência r(t) [V]</span>
+              <span><i class="leg-dot" style="background:#1f77b4; height:3px;"></i>Saída y(t) [V] (1 V = 100 lux)</span>
+              <span id="legGhost"><i class="leg-dot" style="background:#9aa5b1; height:2px;"></i>Sem Controlador (comparação)</span>
+              <span><i class="leg-dot" style="background:#c0392b; height:3px;"></i>Entrada da Planta u(t) [V]</span>
+            </div>
+          </div>
+          <canvas id="scopeCanvas"></canvas>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+// ============================================================================
+// ESTADO GLOBAL
+// ============================================================================
+let currentMode = "closed_tuned"; // open_loop | closed_no_ctrl | closed_try1 | closed_tuned | closed_custom
+let schematicView = "circuit";    // circuit | blocks
+let lastResult = null;
+let lastGhost = null;
+let hoverIdx = null;
+
+// ============================================================================
+// ÁLGEBRA LINEAR E SOLVER POLINOMIAL (IDÊNTICO AO PYTHON)
+// ============================================================================
+function polyMul(p, q) {
+  const res = new Array(p.length + q.length - 1).fill(0);
+  for (let i = 0; i < p.length; i++) {
+    for (let j = 0; j < q.length; j++) res[i + j] += p[i] * q[j];
+  }
+  return res;
+}
+
+function polyFromRoots(roots) {
+  let p = [1];
+  for (const r of roots) p = polyMul(p, [1, -r]);
+  return p;
+}
+
+function solveLinear4x4(A, b) {
+  const n = 4;
+  const M = A.map((row, i) => [...row, b[i]]);
+  for (let col = 0; col < n; col++) {
+    let piv = col;
+    for (let r = col + 1; r < n; r++) {
+      if (Math.abs(M[r][col]) > Math.abs(M[piv][col])) piv = r;
+    }
+    [M[col], M[piv]] = [M[piv], M[col]];
+    const div = M[col][col];
+    if (Math.abs(div) < 1e-15) throw new Error("Sistema diofantino singular");
+    for (let c = col; c <= n; c++) M[col][c] /= div;
+    for (let r = 0; r < n; r++) {
+      if (r === col) continue;
+      const f = M[r][col];
+      for (let c = col; c <= n; c++) M[r][c] -= f * M[col][c];
+    }
+  }
+  return M.map(r => r[n]);
+}
+
+function discretizarPlantaZOH(tau1, tau2, K, h) {
+  const p1 = 1.0 / tau1;
+  const p2 = 1.0 / tau2;
+  const e1 = Math.exp(-p1 * h);
+  const e2 = Math.exp(-p2 * h);
+  let b1, b0;
+  if (Math.abs(tau1 - tau2) > 1e-7) {
+    const A = K;
+    const B = K * p1 * p2 / (-p1 * (-p1 + p2));
+    const C = K * p1 * p2 / (-p2 * (-p2 + p1));
+    b1 = -A * (e1 + e2) - B * (1 + e2) - C * (1 + e1);
+    b0 = A * e1 * e2 + B * e2 + C * e1;
+  } else {
+    // Polo duplo s = -p1
+    b1 = K * (1 - e1 * (1 + p1 * h));
+    b0 = K * (e1 * e1 - e1 + p1 * h * e1);
+  }
+  const bPoly = [b1, b0];
+  const aPoly = polyFromRoots([e1, e2]); // [1, a1, a0]
+  return { bPoly, aPoly, e1, e2 };
+}
+
+function projetarPolinomial(bPoly, aPoly, polesS, h) {
+  const polesZ = polesS.map(s => Math.exp(s * h));
+  const aStar = polyFromRoots(polesZ);
+  const aTilde = polyMul(aPoly, [1, -1]); // grau 3: [1, at2, at1, at0]
+  const rhs = [
+    aStar[1] - aTilde[1],
+    aStar[2] - aTilde[2],
+    aStar[3] - aTilde[3],
+    aStar[4] - 0
+  ];
+  const M = [
+    [aTilde[0], bPoly[0], 0,        0       ],
+    [aTilde[1], bPoly[1], bPoly[0], 0       ],
+    [aTilde[2], 0,        bPoly[1], bPoly[0]],
+    [aTilde[3], 0,        0,        bPoly[1]]
+  ];
+  const [l20, p2, p1, p0] = solveLinear4x4(M, rhs);
+  const ellPoly = polyMul([1, -1], [1, l20]); // [1, ell1, ell0]
+  const pPoly = [p2, p1, p0];
+  return { ellPoly, pPoly, polesZ, aStar };
+}
+
+// ============================================================================
+// SIMULAÇÃO RK4 + ZOH
+// ============================================================================
+function makeRefFunc(type, r0) {
+  if (type === "multistep") {
+    return t => (t < 0.70 ? 2.0 : (t < 1.40 ? 4.0 : 3.0));
+  }
+  if (type === "square") {
+    return t => ((Math.floor(t / 0.6) % 2 === 0) ? 3.5 : 2.0);
+  }
+  return () => r0;
+}
+
+function simulateSystem(cfg, modeOverride = null) {
+  const mode = modeOverride || currentMode;
+  const tauMin = Math.min(cfg.tau1, cfg.tau2);
+  const dt = tauMin / 100.0;
+  const h = tauMin / 10.0;
+  const stepsPerSample = 10;
+
+  const a0_c = 1.0 / (cfg.tau1 * cfg.tau2);
+  const a1_c = (1.0 / cfg.tau1) + (1.0 / cfg.tau2);
+  const b0_c = cfg.K / (cfg.tau1 * cfg.tau2);
+
+  function rk4Step(x1, x2, u) {
+    const f1 = (s1, s2) => s2;
+    const f2 = (s1, s2) => -a0_c * s1 - a1_c * s2 + b0_c * u;
+    const k11 = f1(x1, x2), k12 = f2(x1, x2);
+    const k21 = f1(x1 + 0.5*dt*k11, x2 + 0.5*dt*k12), k22 = f2(x1 + 0.5*dt*k11, x2 + 0.5*dt*k12);
+    const k31 = f1(x1 + 0.5*dt*k21, x2 + 0.5*dt*k22), k32 = f2(x1 + 0.5*dt*k21, x2 + 0.5*dt*k22);
+    const k41 = f1(x1 + dt*k31, x2 + dt*k32),         k42 = f2(x1 + dt*k31, x2 + dt*k32);
+    return [
+      x1 + (dt / 6.0) * (k11 + 2*k21 + 2*k31 + k41),
+      x2 + (dt / 6.0) * (k12 + 2*k22 + 2*k32 + k42)
+    ];
+  }
+
+  const refFn = makeRefFunc(cfg.refType, cfg.r0);
+  const distFn = t => (cfg.disturbance && t >= cfg.tMax * 0.5) ? 0.5 : 0.0;
+  const clampU = u => cfg.sat ? Math.max(0.0, Math.min(5.0, u)) : u;
+
+  const nSamples = Math.max(10, Math.round(cfg.tMax / h));
+  const nSteps = nSamples * stepsPerSample;
+
+  const tArr = new Float64Array(nSteps);
+  const rArr = new Float64Array(nSteps);
+  const yArr = new Float64Array(nSteps);
+  const uArr = new Float64Array(nSteps);
+
+  let x1 = 0, x2 = 0;
+
+  if (mode === "open_loop" || mode === "closed_no_ctrl") {
+    for (let i = 0; i < nSteps; i++) {
+      const t = i * dt;
+      const r = refFn(t);
+      const yMeas = x1 + distFn(t);
+      let u = (mode === "open_loop") ? r : (r - yMeas);
+      u = clampU(u);
+      tArr[i] = t;
+      rArr[i] = r;
+      yArr[i] = yMeas;
+      uArr[i] = u;
+      [x1, x2] = rk4Step(x1, x2, u);
+    }
+    return { tArr, rArr, yArr, uArr, dt, h, tauMin };
+  }
+
+  // Controlador discreto (Polinomial + ZOH)
+  const { ellPoly, pPoly } = cfg.ctrl;
+  const ell1 = ellPoly[1], ell0 = ellPoly[2];
+  const p2 = pPoly[0], p1 = pPoly[1], p0 = pPoly[2];
+  let uAnt1 = 0, uAnt2 = 0, eAnt1 = 0, eAnt2 = 0;
+
+  let idx = 0;
+  for (let k = 0; k < nSamples; k++) {
+    const tSample = k * h;
+    const yMeas = x1 + distFn(tSample);
+    const r = refFn(tSample);
+    const e = r - yMeas;
+    let u = -ell1 * uAnt1 - ell0 * uAnt2 + p2 * e + p1 * eAnt1 + p0 * eAnt2;
+    u = clampU(u);
+    uAnt2 = uAnt1; uAnt1 = u;
+    eAnt2 = eAnt1; eAnt1 = e;
+
+    for (let s = 0; s < stepsPerSample; s++) {
+      const t = idx * dt;
+      tArr[idx] = t;
+      rArr[idx] = refFn(t);
+      yArr[idx] = x1 + distFn(t);
+      uArr[idx] = u;
+      [x1, x2] = rk4Step(x1, x2, u);
+      idx++;
+    }
+  }
+  return { tArr, rArr, yArr, uArr, dt, h, tauMin };
+}
+
+function computeMetrics(res) {
+  const { tArr, rArr, yArr, uArr } = res;
+  const n = tArr.length;
+  const rEnd = rArr[n - 1];
+  const yEnd = yArr[n - 1];
+  const essPct = rEnd !== 0 ? ((rEnd - yEnd) / rEnd) * 100.0 : 0;
+
+  // Para degrau único, calcula P.O. e Ts(2%)
+  let yMax = -Infinity, uMin = Infinity, uMax = -Infinity;
+  for (let i = 0; i < n; i++) {
+    if (yArr[i] > yMax) yMax = yArr[i];
+    if (uArr[i] < uMin) uMin = uArr[i];
+    if (uArr[i] > uMax) uMax = uArr[i];
+  }
+  const base = (currentMode === "open_loop" || currentMode === "closed_no_ctrl") ? yEnd : rEnd;
+  const poPct = base > 0 ? Math.max(0, ((yMax - base) / base) * 100.0) : 0;
+
+  let lastOut = 0;
+  for (let i = 0; i < n; i++) {
+    if (Math.abs(yArr[i] - yEnd) > 0.02 * Math.abs(yEnd)) lastOut = i;
+  }
+  const ts2 = (lastOut + 1 < n) ? tArr[lastOut + 1] : tArr[n - 1];
+  return { yEnd, essPct, poPct, ts2, uMin, uMax };
+}
+
+// ============================================================================
+// LEITURA DA UI E EXECUÇÃO
+// ============================================================================
+function getConfig() {
+  const tau1 = parseFloat(document.getElementById("tau1").value);
+  const tau2 = parseFloat(document.getElementById("tau2").value);
+  const K = parseFloat(document.getElementById("kPlanta").value);
+  const r0 = parseFloat(document.getElementById("r0").value);
+  let tMax = parseFloat(document.getElementById("tMax").value);
+  const refType = document.getElementById("refType").value;
+  if (refType === "multistep" && tMax < 2.1) {
+    tMax = 2.1;
+    document.getElementById("tMax").value = "2.1";
+    document.getElementById("lblTmax").textContent = "2.1";
+  }
+
+  const tauMin = Math.min(tau1, tau2);
+  const h = tauMin / 10.0;
+  const disc = discretizarPlantaZOH(tau1, tau2, K, h);
+
+  let pa = parseFloat(document.getElementById("poleA").value);
+  let pb = parseFloat(document.getElementById("poleB").value);
+  if (currentMode === "closed_try1") { pa = -18; pb = -30; }
+  else if (currentMode === "closed_tuned") { pa = -10; pb = -25; }
+
+  const ctrl = projetarPolinomial(disc.bPoly, disc.aPoly, [pa, pa, pb, pb], h);
+
+  return {
+    tau1, tau2, K, r0, tMax, refType,
+    sat: document.getElementById("chkSat").checked,
+    disturbance: document.getElementById("chkDist").checked,
+    pa, pb, h, tauMin, disc, ctrl
+  };
+}
+
+function syncLabels() {
+  document.getElementById("lblR0").textContent = parseFloat(document.getElementById("r0").value).toFixed(1);
+  document.getElementById("lblTmax").textContent = parseFloat(document.getElementById("tMax").value).toFixed(1);
+  document.getElementById("lblTau1").textContent = parseFloat(document.getElementById("tau1").value).toFixed(3);
+  document.getElementById("lblTau2").textContent = parseFloat(document.getElementById("tau2").value).toFixed(3);
+  document.getElementById("lblK").textContent = parseFloat(document.getElementById("kPlanta").value).toFixed(1);
+  document.getElementById("lblPa").textContent = document.getElementById("poleA").value;
+  document.getElementById("lblPb").textContent = document.getElementById("poleB").value;
+}
+
+function setMode(mode) {
+  currentMode = mode;
+  document.querySelectorAll(".mode-pill").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.mode === mode);
+  });
+  if (mode === "closed_try1") {
+    document.getElementById("poleA").value = -18;
+    document.getElementById("poleB").value = -30;
+  } else if (mode === "closed_tuned") {
+    document.getElementById("poleA").value = -10;
+    document.getElementById("poleB").value = -25;
+  }
+  syncLabels();
+  runAll();
+}
+
+function onPoleSlider() {
+  if (currentMode !== "closed_custom") {
+    currentMode = "closed_custom";
+    document.querySelectorAll(".mode-pill").forEach(btn => {
+      btn.classList.toggle("active", btn.dataset.mode === "closed_custom");
+    });
+  }
+  syncLabels();
+  runAll();
+}
+
+function setView(v) {
+  schematicView = v;
+  document.getElementById("tabCircuit").classList.toggle("active", v === "circuit");
+  document.getElementById("tabBlocks").classList.toggle("active", v === "blocks");
+  renderSchematic(getConfig());
+}
+
+function fmtSign(v, dec = 6) {
+  const s = v >= 0 ? "+" : "−";
+  return `${s} ${Math.abs(v).toFixed(dec)}`;
+}
+
+function runAll() {
+  const cfg = getConfig();
+  lastResult = simulateSystem(cfg);
+  lastGhost = (currentMode !== "closed_no_ctrl" && currentMode !== "open_loop")
+    ? simulateSystem(cfg, "closed_no_ctrl")
+    : null;
+
+  updateEquations(cfg);
+  updateKPIs(cfg, lastResult);
+  renderSchematic(cfg);
+  drawScope();
+}
+
+function updateEquations(cfg) {
+  const dt = cfg.tauMin / 100.0;
+  document.getElementById("eqTimes").textContent =
+    `τ_min = ${cfg.tauMin.toFixed(3)} s  |  Δt = ${dt.toFixed(5)} s  |  h = ${cfg.h.toFixed(4)} s (10×Δt)`;
+
+  const a1 = (1/cfg.tau1 + 1/cfg.tau2).toFixed(2);
+  const a0 = (1/(cfg.tau1*cfg.tau2)).toFixed(2);
+  const b0 = (cfg.K/(cfg.tau1*cfg.tau2)).toFixed(2);
+  document.getElementById("eqGs").textContent =
+    `G(s) = ${cfg.K.toFixed(1)} / [(${cfg.tau1.toFixed(2)}s+1)(${cfg.tau2.toFixed(2)}s+1)] = ${b0} / (s² + ${a1}s + ${a0})`;
+
+  const { bPoly, aPoly } = cfg.disc;
+  document.getElementById("eqGz").textContent =
+    `G(z) = (${bPoly[0].toFixed(6)}z ${fmtSign(bPoly[1])}) / (z² ${fmtSign(aPoly[1])}z ${fmtSign(aPoly[2])})`;
+
+  const { ellPoly, pPoly } = cfg.ctrl;
+  if (currentMode === "open_loop") {
+    document.getElementById("eqCz").textContent = "Malha Aberta: u(t) = r(t) (sem realimentação)";
+  } else if (currentMode === "closed_no_ctrl") {
+    document.getElementById("eqCz").textContent = "Sem Controlador: C(s) = 1  ⇒  u(t) = r(t) − y(t)";
+  } else {
+    document.getElementById("eqCz").textContent =
+      `C(z) = (${pPoly[0].toFixed(5)}z² ${fmtSign(pPoly[1],5)}z ${fmtSign(pPoly[2],5)}) / (z² ${fmtSign(ellPoly[1],5)}z ${fmtSign(ellPoly[2],5)})`;
+  }
+
+  // Atualiza código do algoritmo
+  if (currentMode === "open_loop") {
+    document.getElementById("algoCode").textContent =
+      `// Malha Aberta (sem sensor/controlador)\nwhile(loop) {\n  u = r;\n  vout1(u);\n}`;
+  } else if (currentMode === "closed_no_ctrl") {
+    document.getElementById("algoCode").textContent =
+      `// Malha Fechada sem Controlador\nwhile(loop) {\n  y = vin1();\n  u = r - y;\n  vout1(u);\n}`;
+  } else {
+    document.getElementById("algoCode").textContent =
+`// Periodo h = ${cfg.h.toFixed(4)} s (10 passos dt)
+ell1 = ${ellPoly[1].toFixed(6)}; ell0 = ${ellPoly[2].toFixed(6)};
+p2 = ${pPoly[0].toFixed(6)}; p1 = ${pPoly[1].toFixed(6)}; p0 = ${pPoly[2].toFixed(6)};
+while(loop) {
+  y = vin1();
+  e = r - y;
+  u = -ell1*u1 - ell0*u2 + p2*e + p1*e1 + p0*e2;
+  u2 = u1; u1 = u; e2 = e1; e1 = e;
+  vout1(u);
+}`;
+  }
+}
+
+function updateKPIs(cfg, res) {
+  const m = computeMetrics(res);
+  const isStep = (cfg.refType === "step");
+
+  document.getElementById("valEss").textContent = `${m.essPct.toFixed(2)} %`;
+  document.getElementById("valPo").textContent = isStep ? `${m.poPct.toFixed(2)} %` : "—";
+  document.getElementById("valTs").textContent = isStep ? `${m.ts2.toFixed(3)} s` : "—";
+  document.getElementById("valU").textContent = `${m.uMin.toFixed(2)}..${m.uMax.toFixed(2)} V`;
+
+  const okEss = Math.abs(m.essPct) <= 0.5;
+  const okPo = !isStep || m.poPct <= 5.0;
+  const okTs = !isStep || m.ts2 <= 0.30;
+  const okU = (m.uMin >= -1e-4) && (m.uMax <= 5.0 + 1e-4);
+
+  document.getElementById("kpiEss").className = "kpi " + (okEss ? "ok" : "bad");
+  document.getElementById("kpiPo").className = "kpi " + (!isStep ? "" : (okPo ? "ok" : "bad"));
+  document.getElementById("kpiTs").className = "kpi " + (!isStep ? "" : (okTs ? "ok" : "warn"));
+  document.getElementById("kpiU").className = "kpi " + (okU ? "ok" : "bad");
+
+  const count = [okEss, okPo, okTs, okU].filter(Boolean).length;
+  const kpiSt = document.getElementById("kpiStatus");
+  const valSt = document.getElementById("valStatus");
+  const subSt = document.getElementById("subStatus");
+  if (count === 4) {
+    kpiSt.className = "kpi ok";
+    valSt.textContent = "4 / 4 OK";
+    subSt.textContent = "Todas as metas atendidas";
+  } else {
+    kpiSt.className = "kpi bad";
+    valSt.textContent = `${count} / 4 OK`;
+    const fails = [];
+    if (!okEss) fails.push("e_ss");
+    if (!okPo) fails.push("P.O.");
+    if (!okTs) fails.push("Ts");
+    if (!okU) fails.push("u>5V");
+    subSt.textContent = "Falha em: " + fails.join(", ");
+  }
+}
+
+// ============================================================================
+// ESQUEMÁTICO SVG INTERATIVO (CIRCUITO PSIM OU BLOCOS)
+// ============================================================================
+function renderSchematic(cfg) {
+  const stage = document.getElementById("svgStage");
+  const isOpen = (currentMode === "open_loop");
+  const hasCtrl = (!isOpen && currentMode !== "closed_no_ctrl");
+  const r1K = 10; // kOhm
+  const c1uF = (cfg.tau1 * 1000 / r1K).toFixed(2); // R1=10k -> C1 = tau1/10k
+  const r2K = 15; // kOhm
+  const c2uF = (cfg.tau2 * 1000 / r2K).toFixed(2);
+
+  if (schematicView === "blocks") {
+    stage.innerHTML = `
+    <svg viewBox="0 0 920 230" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M 0 1 L 10 5 L 0 9 z" fill="#14305a"/>
+        </marker>
+        <marker id="arrGray" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M 0 1 L 10 5 L 0 9 z" fill="#9aa5b1"/>
+        </marker>
+      </defs>
+
+      <!-- Referencia -->
+      <text x="22" y="92" font-size="16" font-weight="700" fill="#1f77b4">r(t)</text>
+      <text x="15" y="110" font-size="11" fill="#5f6c7b">${cfg.r0.toFixed(1)} V</text>
+      <line x1="55" y1="88" x2="108" y2="88" stroke="#14305a" stroke-width="2.2" marker-end="url(#arr)"/>
+
+      <!-- Somador -->
+      <circle cx="128" cy="88" r="18" fill="${isOpen ? '#f1f4f8' : '#fff'}" stroke="${isOpen ? '#9aa5b1' : '#14305a'}" stroke-width="2.2"/>
+      <text x="128" y="93" text-anchor="middle" font-size="15" font-weight="700" fill="${isOpen ? '#9aa5b1' : '#14305a'}">Σ</text>
+      <text x="98" y="77" font-size="12" fill="#14305a">+</text>
+      <text x="136" y="122" font-size="14" fill="${isOpen ? '#9aa5b1' : '#c0392b'}">−</text>
+
+      <!-- Seta para controlador -->
+      <line x1="146" y1="88" x2="195" y2="88" stroke="#14305a" stroke-width="2.2" marker-end="url(#arr)"/>
+      <text x="168" y="79" font-size="12" fill="#5f6c7b">${isOpen ? 'r' : 'e'}</text>
+
+      <!-- Controlador C(z) + ZOH -->
+      <g opacity="${hasCtrl ? 1 : 0.35}">
+        <rect x="200" y="54" width="145" height="68" rx="8" fill="#e7f2fc" stroke="#1f77b4" stroke-width="2.2"/>
+        <text x="272" y="83" text-anchor="middle" font-size="16" font-weight="700" fill="#14305a">C(z)</text>
+        <text x="272" y="102" text-anchor="middle" font-size="11" fill="#1f77b4">Polinomial (2ª ord.)</text>
+
+        <line x1="345" y1="88" x2="378" y2="88" stroke="#14305a" stroke-width="2.2" marker-end="url(#arr)"/>
+
+        <rect x="383" y="58" width="90" height="60" rx="8" fill="#fff" stroke="#14305a" stroke-width="2"/>
+        <text x="428" y="84" text-anchor="middle" font-size="14" font-weight="700" fill="#14305a">ZOH</text>
+        <text x="428" y="102" text-anchor="middle" font-size="10.5" fill="#5f6c7b">h = ${(cfg.h*1000).toFixed(1)} ms</text>
+      </g>
+      ${!hasCtrl ? `<line x1="196" y1="88" x2="478" y2="88" stroke="#c0392b" stroke-width="2.2" stroke-dasharray="6,4"/>
+      <text x="336" y="43" text-anchor="middle" font-size="11.5" font-weight="700" fill="#c0392b">BYPASS (${isOpen ? 'Malha Aberta' : 'Sem Controlador'})</text>` : ''}
+
+      <line x1="473" y1="88" x2="520" y2="88" stroke="#14305a" stroke-width="2.2" marker-end="url(#arr)"/>
+      <text x="495" y="79" font-size="12" font-weight="700" fill="#c0392b">u(t)</text>
+
+      <!-- Planta: Driver LED + Sensor LDR -->
+      <rect x="525" y="54" width="145" height="68" rx="8" fill="#fff" stroke="#14305a" stroke-width="2.2"/>
+      <text x="597" y="82" text-anchor="middle" font-size="13.5" font-weight="700" fill="#14305a">Driver LED</text>
+      <text x="597" y="102" text-anchor="middle" font-size="11" fill="#5f6c7b">K_LED=400 | τ₁=${cfg.tau1.toFixed(2)}s</text>
+
+      <line x1="670" y1="88" x2="704" y2="88" stroke="#14305a" stroke-width="2.2" marker-end="url(#arr)"/>
+      <text x="687" y="79" text-anchor="middle" font-size="11" fill="#5f6c7b">Φ</text>
+
+      <rect x="709" y="54" width="145" height="68" rx="8" fill="#fff" stroke="#14305a" stroke-width="2.2"/>
+      <text x="781" y="82" text-anchor="middle" font-size="13.5" font-weight="700" fill="#14305a">Sensor LDR</text>
+      <text x="781" y="102" text-anchor="middle" font-size="11" fill="#5f6c7b">K=${cfg.K.toFixed(1)} | τ₂=${cfg.tau2.toFixed(2)}s</text>
+
+      <!-- Saida y(t) -->
+      <line x1="854" y1="88" x2="900" y2="88" stroke="#14305a" stroke-width="2.2" marker-end="url(#arr)"/>
+      <text x="892" y="74" text-anchor="end" font-size="15" font-weight="700" fill="#1f77b4">y(t)</text>
+
+      <!-- Malha de realimentacao -->
+      <path d="M 875 88 L 875 182 L 128 182 L 128 110" fill="none"
+            stroke="${isOpen ? '#b0bac5' : '#14305a'}" stroke-width="2.2"
+            ${isOpen ? 'stroke-dasharray="6,5" marker-end="url(#arrGray)"' : 'marker-end="url(#arr)"'}/>
+      <text x="500" y="174" text-anchor="middle" font-size="11.5" font-weight="700" fill="${isOpen ? '#9aa5b1' : '#14305a'}">
+        ${isOpen ? 'Realimentação ABERTA (inativa)' : 'Realimentação Unitária — Medição y(t) via A/D'}
+      </text>
+    </svg>`;
+    return;
+  }
+
+  // Circuito Elétrico equivalente estilo PSIM (RC1 + VCVS + RC2)
+  stage.innerHTML = `
+  <svg viewBox="0 0 940 245" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="arr2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+        <path d="M 0 1 L 10 5 L 0 9 z" fill="#14305a"/>
+      </marker>
+    </defs>
+
+    <!-- Fonte Step r(t) -->
+    <circle cx="48" cy="96" r="18" fill="#fff" stroke="#14305a" stroke-width="2"/>
+    <path d="M 39 102 L 47 102 L 47 90 L 57 90" fill="none" stroke="#1f77b4" stroke-width="2"/>
+    <text x="48" y="68" text-anchor="middle" font-size="11.5" font-weight="700" fill="#1f77b4">Step r(t)</text>
+    <line x1="48" y1="114" x2="48" y2="144" stroke="#14305a" stroke-width="2"/>
+    <line x1="36" y1="144" x2="60" y2="144" stroke="#14305a" stroke-width="2"/>
+    <line x1="40" y1="149" x2="56" y2="149" stroke="#14305a" stroke-width="1.6"/>
+
+    <!-- Fio ate Somador -->
+    <polyline points="48,78 48,72 112,72" fill="none" stroke="#14305a" stroke-width="2"/>
+    <line x1="48" y1="78" x2="48" y2="72" stroke="#14305a" stroke-width="2"/>
+    <circle cx="130" cy="72" r="16" fill="${isOpen ? '#eef2f6' : '#fff'}" stroke="${isOpen ? '#9aa5b1' : '#14305a'}" stroke-width="2"/>
+    <text x="130" y="77" text-anchor="middle" font-size="14" font-weight="700" fill="${isOpen ? '#9aa5b1' : '#14305a'}">Σ</text>
+    <text x="105" y="64" font-size="11" fill="#14305a">+</text>
+    <text x="137" y="102" font-size="13" fill="${isOpen ? '#9aa5b1' : '#c0392b'}">−</text>
+
+    <!-- Simplified C Block + ZOH (PSIM) -->
+    <line x1="146" y1="72" x2="185" y2="72" stroke="#14305a" stroke-width="2" marker-end="url(#arr2)"/>
+    <g opacity="${hasCtrl ? 1 : 0.3}">
+      <rect x="190" y="45" width="120" height="54" rx="5" fill="#e7f2fc" stroke="#1f77b4" stroke-width="2"/>
+      <text x="250" y="68" text-anchor="middle" font-size="12" font-weight="700" fill="#14305a">C Block C(z)</text>
+      <text x="250" y="84" text-anchor="middle" font-size="10" fill="#1f77b4">${(1/cfg.h).toFixed(0)} Hz</text>
+
+      <line x1="310" y1="72" x2="335" y2="72" stroke="#14305a" stroke-width="2" marker-end="url(#arr2)"/>
+      <rect x="340" y="48" width="66" height="48" rx="5" fill="#fff" stroke="#14305a" stroke-width="1.8"/>
+      <text x="373" y="70" text-anchor="middle" font-size="12" font-weight="700" fill="#14305a">ZOH</text>
+      <text x="373" y="85" text-anchor="middle" font-size="9.5" fill="#5f6c7b">${(cfg.h*1000).toFixed(1)}ms</text>
+    </g>
+    ${!hasCtrl ? `<line x1="186" y1="72" x2="412" y2="72" stroke="#c0392b" stroke-width="2" stroke-dasharray="5,4"/>` : ''}
+
+    <!-- Fio u(t) entrando no Estagio 1 RC -->
+    <line x1="406" y1="72" x2="448" y2="72" stroke="#c0392b" stroke-width="2.2" marker-end="url(#arr2)"/>
+    <text x="426" y="63" text-anchor="middle" font-size="11.5" font-weight="700" fill="#c0392b">u(t)</text>
+
+    <!-- Resistor R1 -->
+    <rect x="452" y="63" width="52" height="18" fill="#fff" stroke="#14305a" stroke-width="2"/>
+    <text x="478" y="54" text-anchor="middle" font-size="11" font-weight="700" fill="#14305a">R₁=${r1K}kΩ</text>
+    <line x1="504" y1="72" x2="544" y2="72" stroke="#14305a" stroke-width="2"/>
+    <circle cx="544" cy="72" r="3.5" fill="#14305a"/>
+
+    <!-- Capacitor C1 -->
+    <line x1="544" y1="72" x2="544" y2="104" stroke="#14305a" stroke-width="2"/>
+    <line x1="530" y1="104" x2="558" y2="104" stroke="#14305a" stroke-width="2.5"/>
+    <line x1="530" y1="112" x2="558" y2="112" stroke="#14305a" stroke-width="2.5"/>
+    <line x1="544" y1="112" x2="544" y2="144" stroke="#14305a" stroke-width="2"/>
+    <line x1="532" y1="144" x2="556" y2="144" stroke="#14305a" stroke-width="2"/>
+    <line x1="536" y1="149" x2="552" y2="149" stroke="#14305a" stroke-width="1.6"/>
+    <text x="566" y="112" font-size="11" font-weight="700" fill="#14305a">C₁=${c1uF}µF</text>
+    <text x="566" y="126" font-size="10" fill="#5f6c7b">(τ₁=${cfg.tau1.toFixed(2)}s)</text>
+
+    <!-- VCVS (Isolacao + Ganho K) -->
+    <line x1="544" y1="72" x2="625" y2="72" stroke="#14305a" stroke-width="1.8" stroke-dasharray="4,3"/>
+    <polygon points="650,48 676,72 650,96 624,72" fill="#fff6df" stroke="#b9770e" stroke-width="2"/>
+    <text x="650" y="76" text-anchor="middle" font-size="11.5" font-weight="800" fill="#b9770e">×${cfg.K.toFixed(1)}</text>
+    <text x="650" y="38" text-anchor="middle" font-size="10.5" font-weight="700" fill="#b9770e">VCVS (K)</text>
+    <line x1="650" y1="96" x2="650" y2="144" stroke="#14305a" stroke-width="1.8"/>
+    <line x1="638" y1="144" x2="662" y2="144" stroke="#14305a" stroke-width="2"/>
+
+    <!-- Fio para Estagio 2 RC -->
+    <line x1="676" y1="72" x2="716" y2="72" stroke="#14305a" stroke-width="2"/>
+
+    <!-- Resistor R2 -->
+    <rect x="716" y="63" width="52" height="18" fill="#fff" stroke="#14305a" stroke-width="2"/>
+    <text x="742" y="54" text-anchor="middle" font-size="11" font-weight="700" fill="#14305a">R₂=${r2K}kΩ</text>
+    <line x1="768" y1="72" x2="812" y2="72" stroke="#14305a" stroke-width="2"/>
+    <circle cx="812" cy="72" r="3.5" fill="#14305a"/>
+
+    <!-- Capacitor C2 -->
+    <line x1="812" y1="72" x2="812" y2="104" stroke="#14305a" stroke-width="2"/>
+    <line x1="798" y1="104" x2="826" y2="104" stroke="#14305a" stroke-width="2.5"/>
+    <line x1="798" y1="112" x2="826" y2="112" stroke="#14305a" stroke-width="2.5"/>
+    <line x1="812" y1="112" x2="812" y2="144" stroke="#14305a" stroke-width="2"/>
+    <line x1="800" y1="144" x2="824" y2="144" stroke="#14305a" stroke-width="2"/>
+    <line x1="804" y1="149" x2="820" y2="149" stroke="#14305a" stroke-width="1.6"/>
+    <text x="834" y="112" font-size="11" font-weight="700" fill="#14305a">C₂=${c2uF}µF</text>
+    <text x="834" y="126" font-size="10" fill="#5f6c7b">(τ₂=${cfg.tau2.toFixed(2)}s)</text>
+
+    <!-- Voltage Probe y(t) -->
+    <line x1="812" y1="72" x2="890" y2="72" stroke="#14305a" stroke-width="2"/>
+    <circle cx="898" cy="72" r="14" fill="#e7f2fc" stroke="#1f77b4" stroke-width="2"/>
+    <text x="898" y="76" text-anchor="middle" font-size="12" font-weight="800" fill="#1f77b4">V</text>
+    <text x="898" y="48" text-anchor="middle" font-size="11.5" font-weight="700" fill="#1f77b4">y(t)</text>
+
+    <!-- Realimentacao -->
+    <path d="M 862 72 L 862 204 L 130 204 L 130 92" fill="none"
+          stroke="${isOpen ? '#b0bac5' : '#14305a'}" stroke-width="2"
+          ${isOpen ? 'stroke-dasharray="6,5"' : 'marker-end="url(#arr2)"'}/>
+    <text x="495" y="196" text-anchor="middle" font-size="11" font-weight="700" fill="${isOpen ? '#9aa5b1' : '#14305a'}">
+      ${isOpen ? 'Chave de Realimentação ABERTA (Malha Aberta)' : 'Fio de Realimentação (Voltage Probe → Somador)'}
+    </text>
+  </svg>`;
+}
+
+// ============================================================================
+// OSCILOSCÓPIO CANVAS (HIGH-DPI + HOVER PROBE)
+// ============================================================================
+function drawScope() {
+  if (!lastResult) return;
+  const canvas = document.getElementById("scopeCanvas");
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  const W = Math.max(400, rect.width);
+  const H = 360;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  const ctx = canvas.getContext("2d");
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, W, H);
+
+  const showGhost = document.getElementById("chkGhost").checked && lastGhost !== null;
+  document.getElementById("legGhost").style.display = showGhost ? "inline" : "none";
+  const zoomZOH = document.getElementById("chkZoom").checked;
+
+  const res = lastResult;
+  const tFullMax = res.tArr[res.tArr.length - 1];
+  const tViewMax = zoomZOH ? Math.min(0.08, tFullMax) : tFullMax;
+
+  // Regiões dos dois gráficos (superior: y, r; inferior: u)
+  const padL = 56, padR = 20, padT = 14, padB = 34;
+  const gap = 24;
+  const plotW = W - padL - padR;
+  const h1 = (H - padT - padB - gap) * 0.56;
+  const h2 = (H - padT - padB - gap) * 0.44;
+  const y1Top = padT, y1Bot = padT + h1;
+  const y2Top = y1Bot + gap, y2Bot = y2Top + h2;
+
+  // Escalas Y
+  let yMax1 = 3.5;
+  for (let i = 0; i < res.tArr.length; i++) {
+    if (res.tArr[i] > tViewMax) break;
+    yMax1 = Math.max(yMax1, res.yArr[i] * 1.12, res.rArr[i] * 1.12);
+  }
+  let uMin2 = 0, uMax2 = 5.4;
+  for (let i = 0; i < res.tArr.length; i++) {
+    if (res.tArr[i] > tViewMax) break;
+    uMin2 = Math.min(uMin2, res.uArr[i] - 0.3);
+    uMax2 = Math.max(uMax2, res.uArr[i] + 0.4);
+  }
+
+  const xOf = t => padL + (t / tViewMax) * plotW;
+  const yOf1 = v => y1Bot - (v / yMax1) * h1;
+  const yOf2 = v => y2Bot - ((v - uMin2) / (uMax2 - uMin2)) * h2;
+
+  function drawGrid(yTop, yBot, vMin, vMax, yLabel) {
+    ctx.strokeStyle = "#e4e9f0";
+    ctx.lineWidth = 1;
+    ctx.fillStyle = "#5f6c7b";
+    ctx.font = "11px sans-serif";
+    const nY = 4;
+    for (let k = 0; k <= nY; k++) {
+      const val = vMin + (vMax - vMin) * (k / nY);
+      const py = yBot - ((val - vMin) / (vMax - vMin)) * (yBot - yTop);
+      ctx.beginPath(); ctx.moveTo(padL, py); ctx.lineTo(padL + plotW, py); ctx.stroke();
+      ctx.textAlign = "right";
+      ctx.fillText(val.toFixed(1), padL - 6, py + 4);
+    }
+    const nX = 5;
+    for (let k = 0; k <= nX; k++) {
+      const t = tViewMax * (k / nX);
+      const px = xOf(t);
+      ctx.beginPath(); ctx.moveTo(px, yTop); ctx.lineTo(px, yBot); ctx.stroke();
+      if (yBot === y2Bot) {
+        ctx.textAlign = "center";
+        ctx.fillText(t.toFixed(zoomZOH ? 3 : 2) + " s", px, yBot + 16);
+      }
+    }
+    // Eixos
+    ctx.strokeStyle = "#9aa5b1";
+    ctx.beginPath();
+    ctx.moveTo(padL, yTop); ctx.lineTo(padL, yBot); ctx.lineTo(padL + plotW, yBot);
+    ctx.stroke();
+
+    // Rótulo Y
+    ctx.save();
+    ctx.translate(15, (yTop + yBot) / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#1e242c";
+    ctx.font = "600 11.5px sans-serif";
+    ctx.fillText(yLabel, 0, 0);
+    ctx.restore();
+  }
+
+  drawGrid(y1Top, y1Bot, 0, yMax1, "Saída y(t) [V]");
+  drawGrid(y2Top, y2Bot, uMin2, uMax2, "Controle u(t) [V]");
+
+  function plotLine(tArr, vArr, yFn, color, lw, dashed = false, step = false) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(padL, y1Top - 4, plotW, y2Bot - y1Top + 8);
+    ctx.clip();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lw;
+    ctx.setLineDash(dashed ? [6, 4] : []);
+    ctx.beginPath();
+    let started = false;
+    let prevY = 0;
+    for (let i = 0; i < tArr.length; i++) {
+      if (tArr[i] > tViewMax) break;
+      const px = xOf(tArr[i]);
+      const py = yFn(vArr[i]);
+      if (!started) { ctx.moveTo(px, py); started = true; }
+      else {
+        if (step) ctx.lineTo(px, prevY);
+        ctx.lineTo(px, py);
+      }
+      prevY = py;
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Limite fisico 5 V e 0 V no grafico inferior
+  ctx.save();
+  ctx.strokeStyle = "#8c98a4";
+  ctx.setLineDash([4, 4]);
+  const py5 = yOf2(5.0);
+  if (py5 >= y2Top && py5 <= y2Bot) {
+    ctx.beginPath(); ctx.moveTo(padL, py5); ctx.lineTo(padL + plotW, py5); ctx.stroke();
+    ctx.fillStyle = "#5f6c7b"; ctx.font = "10.5px sans-serif"; ctx.textAlign = "right";
+    ctx.fillText("limite driver = 5,0 V", padL + plotW - 4, py5 - 4);
+  }
+  ctx.restore();
+
+  // Fantasma (sem controlador)
+  if (showGhost) {
+    plotLine(lastGhost.tArr, lastGhost.yArr, yOf1, "#aab4bf", 1.8);
+    plotLine(lastGhost.tArr, lastGhost.uArr, yOf2, "#aab4bf", 1.4);
+  }
+
+  // Curvas principais
+  plotLine(res.tArr, res.rArr, yOf1, "#111111", 1.6, true, true);
+  plotLine(res.tArr, res.yArr, yOf1, "#1f77b4", 2.5);
+  plotLine(res.tArr, res.uArr, yOf2, "#c0392b", 2.0, false, true);
+
+  // Cursor / Probe
+  if (hoverIdx !== null && hoverIdx >= 0 && hoverIdx < res.tArr.length && res.tArr[hoverIdx] <= tViewMax) {
+    const px = xOf(res.tArr[hoverIdx]);
+    ctx.save();
+    ctx.strokeStyle = "rgba(20, 48, 90, 0.45)";
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(px, y1Top); ctx.lineTo(px, y2Bot); ctx.stroke();
+    ctx.fillStyle = "#1f77b4";
+    ctx.beginPath(); ctx.arc(px, yOf1(res.yArr[hoverIdx]), 4.5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#c0392b";
+    ctx.beginPath(); ctx.arc(px, yOf2(res.uArr[hoverIdx]), 4.5, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+}
+
+// Eventos do mouse no osciloscópio
+const scopeCanvas = document.getElementById("scopeCanvas");
+scopeCanvas.addEventListener("mousemove", (ev) => {
+  if (!lastResult) return;
+  const rect = scopeCanvas.getBoundingClientRect();
+  const padL = 56, padR = 20;
+  const plotW = rect.width - padL - padR;
+  const x = ev.clientX - rect.left - padL;
+  const zoomZOH = document.getElementById("chkZoom").checked;
+  const tFullMax = lastResult.tArr[lastResult.tArr.length - 1];
+  const tViewMax = zoomZOH ? Math.min(0.08, tFullMax) : tFullMax;
+  const tMouse = Math.max(0, Math.min(tViewMax, (x / plotW) * tViewMax));
+  const idx = Math.min(lastResult.tArr.length - 1, Math.max(0, Math.round(tMouse / lastResult.dt)));
+  hoverIdx = idx;
+  const r = lastResult.rArr[idx], y = lastResult.yArr[idx], u = lastResult.uArr[idx];
+  document.getElementById("probeReadout").textContent =
+    `t=${lastResult.tArr[idx].toFixed(4)}s | r=${r.toFixed(2)}V | y=${y.toFixed(3)}V (${(y*100).toFixed(0)} lux) | u=${u.toFixed(3)}V`;
+  drawScope();
+});
+scopeCanvas.addEventListener("mouseleave", () => {
+  hoverIdx = null;
+  document.getElementById("probeReadout").textContent = "Passe o mouse no gráfico para medir (Probe)";
+  drawScope();
+});
+
+// Exportar CSV
+function exportCSV() {
+  if (!lastResult) return;
+  const rows = ["t_s,r_V,y_V,y_lux,u_V"];
+  for (let i = 0; i < lastResult.tArr.length; i++) {
+    rows.push(`${lastResult.tArr[i].toFixed(5)},${lastResult.rArr[i].toFixed(4)},${lastResult.yArr[i].toFixed(5)},${(lastResult.yArr[i]*100).toFixed(2)},${lastResult.uArr[i].toFixed(5)}`);
+  }
+  const blob = new Blob([rows.join("\n")], { type: "text/csv;charset=utf-8;" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `simulacao_${currentMode}.csv`;
+  a.click();
+}
+
+function resetDefaults() {
+  document.getElementById("refType").value = "step";
+  document.getElementById("r0").value = "3.0";
+  document.getElementById("tMax").value = "1.0";
+  document.getElementById("tau1").value = "0.05";
+  document.getElementById("tau2").value = "0.15";
+  document.getElementById("kPlanta").value = "4.0";
+  document.getElementById("chkGhost").checked = true;
+  document.getElementById("chkSat").checked = false;
+  document.getElementById("chkDist").checked = false;
+  document.getElementById("chkZoom").checked = false;
+  setMode("closed_tuned");
+}
+
+// Eventos dos botões de modo
+document.querySelectorAll(".mode-pill").forEach(btn => {
+  btn.addEventListener("click", () => setMode(btn.dataset.mode));
+});
+window.addEventListener("resize", drawScope);
+
+// Inicialização
+syncLabels();
+runAll();
+</script>
+</body>
+</html>
