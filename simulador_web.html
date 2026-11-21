@@ -1386,10 +1386,12 @@ document.querySelectorAll(".mode-pill").forEach(btn => {
   btn.addEventListener("click", () => setMode(btn.dataset.mode));
 });
 window.addEventListener("resize", drawScope);
+window.addEventListener("load", drawScope);
 
 // Inicialização
 syncLabels();
 runAll();
+requestAnimationFrame(drawScope);
 </script>
 </body>
 </html>
