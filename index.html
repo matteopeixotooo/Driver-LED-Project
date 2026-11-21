@@ -2,13 +2,529 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8" />
-<meta http-equiv="refresh" content="0; url=simulador_web.html" />
-<title>Simulador — Controle Digital de Iluminação</title>
-<script>
-  window.location.replace("simulador_web.html");
-</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Controle Digital de Iluminação Adaptativa — Matteo Peixoto</title>
+<style>
+  :root {
+    --bg: #eef2f7;
+    --panel: #ffffff;
+    --panel-alt: #f7f9fc;
+    --border: #cfd8e3;
+    --navy: #14305a;
+    --accent: #1f77b4;
+    --accent-soft: #e7f2fc;
+    --green: #1e8449;
+    --green-soft: #e8f7ee;
+    --red: #c0392b;
+    --yellow: #f5b700;
+    --text: #1e242c;
+    --muted: #5f6c7b;
+    --mono: "DejaVu Sans Mono", Consolas, monospace;
+    --sans: "Noto Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+  }
+
+  /* Hero */
+  .hero {
+    background: linear-gradient(135deg, #102648 0%, #14305a 65%, #1a437a 100%);
+    color: #fff;
+    padding: 36px 20px 32px;
+    border-bottom: 4px solid var(--yellow);
+  }
+  .hero-inner {
+    max-width: 1160px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+  .kicker {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    color: #8ec3f2;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .hero h1 {
+    margin: 0 0 10px;
+    font-size: clamp(26px, 4vw, 38px);
+    line-height: 1.15;
+  }
+  .hero p {
+    margin: 0;
+    color: #d2e2f4;
+    max-width: 680px;
+    font-size: 15px;
+  }
+  .hero-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 11px 18px;
+    border-radius: 7px;
+    font-weight: 700;
+    font-size: 14px;
+    text-decoration: none;
+    cursor: pointer;
+    border: 1px solid rgba(255,255,255,0.28);
+    color: #fff;
+    background: rgba(255,255,255,0.1);
+    transition: transform 0.12s, background 0.15s;
+  }
+  .btn:hover { background: rgba(255,255,255,0.2); transform: translateY(-1px); }
+  .btn-main {
+    background: #27ae60;
+    border-color: #219a52;
+    box-shadow: 0 4px 12px rgba(39,174,96,0.35);
+  }
+  .btn-main:hover { background: #219a52; }
+
+  .container {
+    max-width: 1160px;
+    margin: 0 auto;
+    padding: 22px 20px 44px;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+  }
+
+  /* Grid de cartões principais */
+  .cards-4 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+  }
+  @media (max-width: 980px) { .cards-4 { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 560px) { .cards-4 { grid-template-columns: 1fr; } }
+
+  .nav-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 12px;
+    box-shadow: 0 1px 3px rgba(16,24,40,0.05);
+  }
+  .nav-card .tag {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 99px;
+    background: var(--accent-soft);
+    color: var(--navy);
+    margin-bottom: 6px;
+  }
+  .nav-card h2 {
+    margin: 0 0 6px;
+    font-size: 17px;
+    color: var(--navy);
+  }
+  .nav-card p {
+    margin: 0;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .card-links {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .link-btn {
+    display: inline-block;
+    padding: 7px 12px;
+    border-radius: 6px;
+    font-size: 12.5px;
+    font-weight: 700;
+    text-decoration: none;
+    background: var(--navy);
+    color: #fff;
+  }
+  .link-btn:hover { background: var(--accent); }
+  .link-btn.sec {
+    background: var(--panel-alt);
+    color: var(--navy);
+    border: 1px solid var(--border);
+  }
+  .link-btn.sec:hover { background: var(--accent-soft); }
+
+  /* Painéis */
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(16,24,40,0.05);
+  }
+  .panel-header {
+    background: var(--panel-alt);
+    border-bottom: 1px solid var(--border);
+    padding: 11px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .panel-header h2 {
+    margin: 0;
+    font-size: 15px;
+    color: var(--navy);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+  .panel-body { padding: 16px; }
+
+  /* Resumo técnico */
+  .summary-grid {
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 860px) { .summary-grid { grid-template-columns: 1fr; } }
+
+  .eq-box {
+    background: var(--panel-alt);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    color: var(--navy);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .eq-box span.lbl {
+    display: block;
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--accent);
+    text-transform: uppercase;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  th, td {
+    padding: 9px 10px;
+    border-bottom: 1px solid #e4e9f0;
+    text-align: center;
+  }
+  th:first-child, td:first-child { text-align: left; font-weight: 600; }
+  th {
+    background: var(--panel-alt);
+    color: var(--muted);
+    font-size: 12px;
+    text-transform: uppercase;
+  }
+  .bad { color: var(--red); font-weight: 700; }
+  .good { color: var(--green); font-weight: 700; }
+
+  /* Visualizador de slides */
+  .slide-viewer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+  .slide-frame {
+    width: 100%;
+    max-width: 920px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    background: #fff;
+    box-shadow: 0 2px 10px rgba(20,48,90,0.08);
+  }
+  .slide-frame img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  .slide-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .ctrl-btn {
+    padding: 7px 14px;
+    border: 1px solid var(--border);
+    background: #fff;
+    color: var(--navy);
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .ctrl-btn:hover { background: var(--accent-soft); border-color: var(--accent); }
+  .slide-counter {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--navy);
+  }
+
+  /* Galeria de figuras */
+  .fig-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+  }
+  @media (max-width: 820px) { .fig-grid { grid-template-columns: 1fr; } }
+  .fig-card {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    background: #fff;
+  }
+  .fig-card img { width: 100%; height: auto; display: block; }
+  .fig-card .cap {
+    padding: 8px 12px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--navy);
+    background: var(--panel-alt);
+    border-top: 1px solid var(--border);
+  }
+
+  footer {
+    text-align: center;
+    font-size: 12px;
+    color: var(--muted);
+    padding: 10px 20px 24px;
+  }
+</style>
 </head>
 <body>
-<p>Abrindo o simulador... <a href="simulador_web.html">clique aqui</a> se não redirecionar.</p>
+
+<section class="hero">
+  <div class="hero-inner">
+    <div>
+      <div class="kicker">Controle Digital (2026/2) · Matteo Peixoto</div>
+      <h1>Controle Digital de Iluminação Adaptativa</h1>
+      <p>
+        Projeto completo de controle digital para luminária LED + sensor LDR (2ª ordem),
+        modelado no tempo contínuo, simulado com integração RK4 (Δt = τ_min/100) e controlado
+        via <strong>Método Polinomial Discreto</strong> com retentor ZOH (h = τ_min/10).
+      </p>
+    </div>
+    <div class="hero-actions">
+      <a class="btn btn-main" href="simulador_web.html">▶ Abrir Simulador Interativo</a>
+      <a class="btn" href="#slides">📊 Ver Slides</a>
+      <a class="btn" href="https://github.com/matteopeixotooo/Driver-LED-Project" target="_blank" rel="noopener">GitHub</a>
+    </div>
+  </div>
+</section>
+
+<main class="container">
+
+  <!-- 4 CARDS DE NAVEGAÇÃO -->
+  <section class="cards-4">
+    <div class="nav-card">
+      <div>
+        <span class="tag">INTERATIVO (ESTILO PSIM)</span>
+        <h2>Simulador Web</h2>
+        <p>Esquemático RC + diagrama de blocos, modos de malha aberta/fechada, alocação livre de polos e osciloscópio com probe.</p>
+      </div>
+      <div class="card-links">
+        <a class="link-btn" href="simulador_web.html">Abrir Simulador</a>
+      </div>
+    </div>
+
+    <div class="nav-card">
+      <div>
+        <span class="tag">DEFESA (13 SLIDES)</span>
+        <h2>Apresentação</h2>
+        <p>Slides estruturados para apresentação de até 10 minutos, cobrindo planta, modelagem, projeto e resultados.</p>
+      </div>
+      <div class="card-links">
+        <a class="link-btn" href="#slides">Ver aqui</a>
+        <a class="link-btn sec" href="apresentacao/apresentacao_controle_iluminacao.pdf" target="_blank">PDF</a>
+        <a class="link-btn sec" href="apresentacao/apresentacao_controle_iluminacao.pptx">PPTX</a>
+      </div>
+    </div>
+
+    <div class="nav-card">
+      <div>
+        <span class="tag">DOCUMENTO COMPLETO</span>
+        <h2>Relatório Técnico</h2>
+        <p>Todas as 9 seções exigidas pelo trabalho: introdução, análise, projeto diofantino, algoritmo e conclusões.</p>
+      </div>
+      <div class="card-links">
+        <a class="link-btn" href="https://github.com/matteopeixotooo/Driver-LED-Project/blob/main/relatorio.md" target="_blank" rel="noopener">Ler no GitHub</a>
+      </div>
+    </div>
+
+    <div class="nav-card">
+      <div>
+        <span class="tag">PYTHON (RK4 + ZOH)</span>
+        <h2>Código da Simulação</h2>
+        <p>Script Python que discretiza a planta, resolve a Equação Diofantina e gera os gráficos de validação.</p>
+      </div>
+      <div class="card-links">
+        <a class="link-btn" href="https://github.com/matteopeixotooo/Driver-LED-Project/blob/main/simulacao_iluminacao.py" target="_blank" rel="noopener">Ver Código</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- RESUMO DO PROJETO -->
+  <section class="panel">
+    <div class="panel-header">
+      <h2>Resumo Técnico do Projeto</h2>
+    </div>
+    <div class="panel-body summary-grid">
+      <div class="eq-box">
+        <div>
+          <span class="lbl">Planta Contínua (Driver LED τ₁ = 0,05 s + Sensor LDR τ₂ = 0,15 s)</span>
+          G(s) = 4,0 / [(0,05s + 1)(0,15s + 1)] = 533,33 / (s² + 26,67s + 133,33)
+        </div>
+        <div>
+          <span class="lbl">Discretização ZOH (τ_min = 0,05 s · Δt = 0,5 ms · h = 5 ms)</span>
+          G(z) = (0,006378z + 0,006101) / (z² − 1,872054z + 0,875173)
+        </div>
+        <div>
+          <span class="lbl">Controlador Polinomial (Polos −10, −10, −25, −25 rad/s + Modelo Interno z−1)</span>
+          C(z) = (0,785669z² − 1,469869z + 0,686831) / (z² − 1,800410z + 0,800410)
+        </div>
+      </div>
+
+      <div>
+        <table>
+          <thead>
+            <tr>
+              <th>Métrica (Degrau 3 V)</th>
+              <th>Sem Controlador</th>
+              <th>Com Controlador</th>
+              <th>Meta</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Erro em regime (e_ss)</td>
+              <td class="bad">20,00 %</td>
+              <td class="good">≈ 0,00 %</td>
+              <td>0 %</td>
+            </tr>
+            <tr>
+              <td>Overshoot (P.O.)</td>
+              <td class="bad">15,24 %</td>
+              <td class="good">0,88 %</td>
+              <td>≤ 5,0 %</td>
+            </tr>
+            <tr>
+              <td>Acomodação Ts (2%)</td>
+              <td>0,3065 s</td>
+              <td class="good">0,2565 s</td>
+              <td>≤ 0,30 s</td>
+            </tr>
+            <tr>
+              <td>Controle u(t)</td>
+              <td>0,22 .. 3,00 V</td>
+              <td class="good">0,75 .. 2,36 V</td>
+              <td>0 .. 5,0 V</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- VISUALIZADOR DE SLIDES -->
+  <section class="panel" id="slides">
+    <div class="panel-header">
+      <h2>Slides da Apresentação</h2>
+      <a class="link-btn sec" href="apresentacao/apresentacao_controle_iluminacao.pdf" target="_blank">Abrir PDF Completo</a>
+    </div>
+    <div class="panel-body slide-viewer">
+      <div class="slide-frame">
+        <img id="slideImg" src="apresentacao/slides/slide_01.png" alt="Slide 1 da apresentação" />
+      </div>
+      <div class="slide-controls">
+        <button class="ctrl-btn" onclick="changeSlide(-1)">◀ Anterior</button>
+        <span class="slide-counter" id="slideCounter">Slide 1 / 13</span>
+        <button class="ctrl-btn" onclick="changeSlide(1)">Próximo ▶</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- GRÁFICOS DO RELATÓRIO -->
+  <section class="panel">
+    <div class="panel-header">
+      <h2>Gráficos Gerados pela Simulação (Python)</h2>
+    </div>
+    <div class="panel-body fig-grid">
+      <div class="fig-card">
+        <img src="figuras/fig1_malha_fechada_sem_controlador.png" alt="Malha fechada sem controlador" />
+        <div class="cap">1. Malha fechada sem controlador (erro de 20% e P.O. de 15,24%)</div>
+      </div>
+      <div class="fig-card">
+        <img src="figuras/fig2_malha_fechada_tentativa1.png" alt="Primeira tentativa antes do ajuste fino" />
+        <div class="cap">2. 1ª tentativa (−18, −30): overshoot 8,79% e u_max = 7,23 V &gt; 5 V</div>
+      </div>
+      <div class="fig-card">
+        <img src="figuras/fig3_malha_fechada_ajustado.png" alt="Controlador ajustado com zoom ZOH" />
+        <div class="cap">3. Controlador ajustado (−10, −25): todas as metas atendidas + zoom ZOH</div>
+      </div>
+      <div class="fig-card">
+        <img src="figuras/fig4_seguimento_multiplos_degraus.png" alt="Seguimento de múltiplos degraus" />
+        <div class="cap">4. Ensaio complementar: múltiplos degraus (200 → 400 → 300 lux)</div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  Controle Digital (2026/2) · Matteo Peixoto · Projeto hospedado via GitHub Pages
+</footer>
+
+<script>
+  const TOTAL_SLIDES = 13;
+  let currentSlide = 1;
+
+  function renderSlide() {
+    const num = String(currentSlide).padStart(2, "0");
+    document.getElementById("slideImg").src = `apresentacao/slides/slide_${num}.png`;
+    document.getElementById("slideImg").alt = `Slide ${currentSlide} da apresentação`;
+    document.getElementById("slideCounter").textContent = `Slide ${currentSlide} / ${TOTAL_SLIDES}`;
+  }
+
+  function changeSlide(delta) {
+    currentSlide += delta;
+    if (currentSlide < 1) currentSlide = TOTAL_SLIDES;
+    if (currentSlide > TOTAL_SLIDES) currentSlide = 1;
+    renderSlide();
+  }
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowRight") changeSlide(1);
+    if (e.key === "ArrowLeft") changeSlide(-1);
+  });
+</script>
 </body>
 </html>
