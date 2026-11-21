@@ -26,8 +26,12 @@
   }
 
   * { box-sizing: border-box; }
-  body {
+  html, body {
     margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+  }
+  body {
     font-family: var(--sans);
     background: var(--bg);
     color: var(--text);
@@ -104,6 +108,7 @@
   }
   @media (max-width: 1080px) {
     .layout { grid-template-columns: 1fr; }
+    .main-col { order: -1; }
   }
 
   .card {
@@ -255,9 +260,11 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    min-height: 235px;
+    min-height: 220px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
-  .svg-stage svg { width: 100%; height: auto; max-height: 245px; }
+  .svg-stage svg { width: 100%; min-width: 520px; height: auto; max-height: 245px; }
 
   .eq-box {
     background: var(--panel-alt);
@@ -293,11 +300,8 @@
   /* KPIs */
   .kpi-strip {
     display: grid;
-    grid-template-columns: repeat(5, minmax(120px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     gap: 8px;
-  }
-  @media (max-width: 900px) {
-    .kpi-strip { grid-template-columns: repeat(2, 1fr); }
   }
   .kpi {
     background: var(--panel);
@@ -343,6 +347,18 @@
     height: 360px;
     display: block;
     cursor: crosshair;
+    touch-action: pan-y;
+  }
+  @media (max-width: 640px) {
+    header { padding: 10px 12px; }
+    header h1 { font-size: 14.5px; }
+    .toolbar { width: 100%; }
+    .toolbar .btn { flex: 1 1 auto; text-align: center; min-height: 38px; padding: 6px 8px; font-size: 12px; }
+    .layout { padding: 8px; gap: 10px; }
+    .grid-2 { grid-template-columns: 1fr; }
+    .mode-pill, .tab-btn { min-height: 38px; }
+    canvas#scopeCanvas { height: 290px; }
+    .probe-readout { width: 100%; font-size: 11px; overflow-x: auto; }
   }
   .legend-row {
     display: flex;
@@ -1175,13 +1191,17 @@ function renderSchematic(cfg) {
 // ============================================================================
 // OSCILOSCÓPIO CANVAS (HIGH-DPI + HOVER PROBE)
 // ============================================================================
+function getScopePadL(width) {
+  return width < 480 ? 44 : 56;
+}
+
 function drawScope() {
   if (!lastResult) return;
   const canvas = document.getElementById("scopeCanvas");
   const dpr = window.devicePixelRatio || 1;
   const rect = canvas.getBoundingClientRect();
-  const W = Math.max(400, rect.width);
-  const H = 360;
+  const W = Math.max(240, rect.width);
+  const H = Math.max(220, rect.height || 360);
   canvas.width = W * dpr;
   canvas.height = H * dpr;
   const ctx = canvas.getContext("2d");
@@ -1197,7 +1217,7 @@ function drawScope() {
   const tViewMax = zoomZOH ? Math.min(0.08, tFullMax) : tFullMax;
 
   // Regiões dos dois gráficos (superior: y, r; inferior: u)
-  const padL = 56, padR = 20, padT = 14, padB = 34;
+  const padL = getScopePadL(W), padR = W < 480 ? 12 : 20, padT = 14, padB = 34;
   const gap = 24;
   const plotW = W - padL - padR;
   const h1 = (H - padT - padB - gap) * 0.56;
@@ -1329,14 +1349,14 @@ function drawScope() {
   }
 }
 
-// Eventos do mouse no osciloscópio
+// Eventos do mouse e toque no osciloscópio
 const scopeCanvas = document.getElementById("scopeCanvas");
-scopeCanvas.addEventListener("mousemove", (ev) => {
+function updateProbeAtClientX(clientX) {
   if (!lastResult) return;
   const rect = scopeCanvas.getBoundingClientRect();
-  const padL = 56, padR = 20;
-  const plotW = rect.width - padL - padR;
-  const x = ev.clientX - rect.left - padL;
+  const padL = getScopePadL(rect.width), padR = rect.width < 480 ? 12 : 20;
+  const plotW = Math.max(60, rect.width - padL - padR);
+  const x = clientX - rect.left - padL;
   const zoomZOH = document.getElementById("chkZoom").checked;
   const tFullMax = lastResult.tArr[lastResult.tArr.length - 1];
   const tViewMax = zoomZOH ? Math.min(0.08, tFullMax) : tFullMax;
@@ -1347,12 +1367,21 @@ scopeCanvas.addEventListener("mousemove", (ev) => {
   document.getElementById("probeReadout").textContent =
     `t=${lastResult.tArr[idx].toFixed(4)}s | r=${r.toFixed(2)}V | y=${y.toFixed(3)}V (${(y*100).toFixed(0)} lux) | u=${u.toFixed(3)}V`;
   drawScope();
-});
-scopeCanvas.addEventListener("mouseleave", () => {
+}
+function clearProbe() {
   hoverIdx = null;
   document.getElementById("probeReadout").textContent = "Passe o mouse no gráfico para medir (Probe)";
   drawScope();
-});
+}
+scopeCanvas.addEventListener("mousemove", (ev) => updateProbeAtClientX(ev.clientX));
+scopeCanvas.addEventListener("mouseleave", clearProbe);
+scopeCanvas.addEventListener("touchstart", (ev) => {
+  if (ev.touches.length > 0) updateProbeAtClientX(ev.touches[0].clientX);
+}, { passive: true });
+scopeCanvas.addEventListener("touchmove", (ev) => {
+  if (ev.touches.length > 0) updateProbeAtClientX(ev.touches[0].clientX);
+}, { passive: true });
+scopeCanvas.addEventListener("touchend", clearProbe, { passive: true });
 
 // Exportar CSV
 function exportCSV() {

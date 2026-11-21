@@ -2,54 +2,50 @@
 
 Simulador online: https://matteopeixotooo.github.io/Driver-LED-Project/
 
-## Slide 1 — Capa (15 s)
+## Slide 1 — Capa (20 s)
 
-Meu trabalho é o controle digital de iluminação: manter a luz de uma bancada num valor desejado usando um LED, um sensor de luz e um controlador digital. O QR code abre o simulador online do projeto.
+Meu trabalho é o controle digital de iluminação adaptativa: manter uma bancada em 300 lux usando driver LED, sensor LDR e controlador projetado pelo Método Polinomial. O QR code abre o simulador online.
 
-## Slide 2 — A planta (50 s)
+## Slide 2 — A planta (45 s)
 
-A planta é uma luminária de LED sobre uma bancada. O objetivo é manter a iluminação num valor, por exemplo 300 lux, que é o recomendado para escritórios. Um sensor de luz, o LDR, fica na bancada; o computador lê esse sensor e ajusta a tensão do LED. A entrada da planta é a tensão no driver do LED, de 0 a 5 V, e a saída é a tensão do sensor, calibrada para 1 V igual a 100 lux.
+A planta é uma luminária LED sobre uma bancada. A entrada u é a tensão no driver, de 0 a 5 V, e a saída y é a tensão do sensor LDR calibrada para 1 V igual a 100 lux. O objetivo é manter a luz exatamente no valor desejado.
 
-## Slide 3 — Componentes (50 s)
+## Slide 3 — Modelagem (1 min)
 
-A planta tem dois blocos. O driver do LED transforma tensão em luz; ele tem um filtro RC que suaviza o PWM, então demora um pouco para responder: constante de tempo de 0,05 s, com ganho de 400 lux por volt. O sensor LDR transforma luz em tensão; somando a inércia do LDR com o filtro anti-ruído, a constante de tempo é 0,15 s, com 0,01 V por lux. A constante de tempo é o tempo de reação: em t = τ o bloco chega a 63 % do valor final. Dois blocos de primeira ordem em série dão uma planta de segunda ordem.
+Modelando cada bloco por uma equação diferencial de 1ª ordem e aplicando Laplace, temos 400/(0,05s+1) para o LED e 0,01/(0,15s+1) para o LDR. Multiplicando, chegamos a G(s) = 4 / [(0,05s+1)(0,15s+1)], de 2ª ordem, Tipo 0, com polos em -20 e -6,67 rad/s. Também escrevo em variáveis de estado para integrar por RK4.
 
-## Slide 4 — Modelagem (1 min)
+## Slide 4 — Análise em Malha Fechada sem Controlador (50 s)
 
-Cada bloco é uma equação diferencial de primeira ordem. Aplicando Laplace e multiplicando os dois blocos, chego na função de transferência G(s) = 4 sobre (0,05s + 1)(0,15s + 1). O ganho 4 é 400 vezes 0,01. Em variáveis de estado, uso x1 = y e x2 = derivada de y, que é a forma que eu integro no computador com Runge-Kutta.
+Fechando a malha sem controlador (C(s)=1), calculamos G_MF(s) = 533,33 / (s² + 26,67s + 666,67). Daí tiramos wn = 25,82 rad/s e zeta = 0,5164, prevendo overshoot de 15%. Pelo Teorema do Valor Final, y(infinito) = 2,40 V para degrau de 3 V, logo erro de regime de 20%.
 
-## Slide 5 — Análise da planta (40 s)
+## Slide 5 — Simulação sem Controlador (45 s)
 
-Analisando a planta sozinha: aplicando 0,75 V no LED, a saída vai para 3 V, porque o ganho é 4. Os polos são -20 e -6,67: reais e negativos, então é estável e não oscila. Mas é lenta, cerca de 0,63 s, e é tipo 0, sem integrador, o que já indica erro em regime quando fechar a malha.
+Integrando a planta com passo Δt = τ_min/100 = 0,5 ms, a simulação confirma exatamente as contas: erro de 20% (para em 2,40 V), overshoot de 15,24% e acomodação em 0,31 s.
 
-## Slide 6 — Sem controlador (1 min)
+## Slide 6 — Especificações e Método (45 s)
 
-Fechando a malha sem controlador, ou seja, u = r - y, com degrau de 3 V: aparecem três problemas. Erro em regime de 20 %: a luz para em 240 lux em vez de 300. Overshoot de 15 %: a luz passa do ponto e oscila. E leva 0,31 s para acomodar. Isso acontece porque a planta não tem integrador e a malha fechada fica subamortecida.
+Defini quatro metas: erro zero, P.O. <= 5%, Ts <= 0,30 s e u entre 0 e 5 V. Escolhi a Segunda Maneira com o Método Polinomial da Aula 10: resolver a Equação Diofantina a(z)ℓ(z) + b(z)p(z) = a*(z) com modelo interno (z-1).
 
-## Slide 7 — Especificações (40 s)
+## Slide 7 — Discretização ZOH (1 min)
 
-A partir disso defini quatro especificações: erro em regime zero, para a luz ficar exatamente no valor pedido; overshoot de no máximo 5 %, para não dar flash de luz; tempo de acomodação até 0,30 s, mais rápido que hoje; e sinal de controle entre 0 e 5 V, que é o limite físico do driver.
+Seguindo a Aula 08, aplicamos a Equivalência do ZOH para h = τ_min/10 = 5 ms. Expandindo G(s)/s em frações parciais, encontramos A=4, B=2 e C=-6. Aplicando a Transformada Z e multiplicando por (z-1)/z, obtemos G(z) exata.
 
-## Slide 8 — Método (1 min)
+## Slide 8 — Equação Diofantina (1 min 15 s)
 
-O enunciado permite duas maneiras. Na primeira projeta-se contínuo e depois discretiza o controlador. Eu usei a segunda: discretizo a planta e projeto o controlador direto no tempo discreto, que é exatamente o algoritmo que o computador executa. O método foi o Polinomial: eu escolho os polos da malha fechada e resolvo a equação a(z)ℓ(z) + b(z)p(z) = a*(z). Colocando o fator (z - 1) em ℓ(z) eu incluo um integrador, que garante erro zero.
+Verificamos que a(z) e b(z) são coprimos. Impondo ℓ(z)=(z-1)ℓ₂(z), ã(z) fica de grau 3, então com a*(z) de grau 4 temos solução única causal com ℓ₂ de grau 1 e p de grau 2. Mapeando os polos -10 e -25 para z, montamos o sistema 4x4 igualando potências de z e chegamos ao controlador C(z).
 
-## Slide 9 — Projeto (1 min)
+## Slide 9 — Algoritmo e ZOH (45 s)
 
-Passo 1: a menor constante de tempo é 0,05 s, então pela regra do trabalho a planta é simulada com passo de 0,5 ms e o controlador amostra a cada 5 ms, ou seja, 10 passos da planta por amostra. Passo 2: discretizo a planta com o segurador de ordem zero e obtenho G(z). Passo 3: escolho os polos em -10, -10, -25 e -25 rad/s, resolvo o sistema e chego neste controlador C(z), que tem o integrador (z - 1) no denominador.
+Dividindo numerador e denominador de C(z) por z² e aplicando Z inversa, temos a equação a diferenças causal. No algoritmo, a cada 5 ms lê y, calcula e = r - y, calcula u e mantém constante por 10 passos Δt pelo princípio do ZOH.
 
-## Slide 10 — Algoritmo (30 s)
+## Slide 10 — Simulação com Controlador (50 s)
 
-Este é o algoritmo: a cada 5 ms ele lê o sensor, calcula o erro, calcula u com a equação a diferenças e envia ao LED. Como pede o trabalho, u fica constante durante a amostra: cada degrau dura 10 passos da simulação da planta.
+Comparando com a curva sem controlador: erro caiu de 20% para zero, overshoot de 15,24% para 0,88%, Ts para 0,2565 s e controle entre 0,75 e 2,36 V. Todas as 4 metas foram atendidas.
 
-## Slide 11 — Com controlador (1 min)
+## Slide 11 — Ajuste Fino (35 s)
 
-Com o controlador, a curva azul é a nova resposta e a cinza é a antiga. O erro em regime foi de 20 % para zero, o overshoot de 15 % para 0,9 %, o tempo de acomodação de 0,31 para 0,26 s, e o sinal de controle ficou no máximo em 2,4 V, dentro do limite de 5 V. As quatro especificações foram atendidas.
+Mostrando o ajuste fino: na 1ª tentativa com polos em -18 e -30, os zeros de p(z) causaram overshoot de 8,79% e pico de u em 7,23 V (acima de 5 V). Suavizando os polos para -10 e -25, todas as especificações ficaram dentro da meta.
 
-## Slide 12 — Ajuste fino (30 s)
+## Slide 12 — Conclusões (30 s)
 
-Esses polos vieram de um ajuste fino. Na primeira tentativa usei polos mais rápidos, -18 e -30: o overshoot foi 8,8 % e o sinal de controle passou de 7 V, acima do limite do driver. Suavizando para -10 e -25, tudo foi atendido.
-
-## Slide 13 — Conclusão (20 s)
-
-Resumindo: modelei a planta LED mais LDR como segunda ordem, sem controlador ela errava 20 % e oscilava, e com o controlador polinomial com integrador todas as metas foram atendidas. O simulador está online no QR code. Obrigado.
+Concluindo: a análise teórica e a simulação bateram perfeitamente, o Método Polinomial zerou o erro e atendeu todas as metas com um algoritmo leve. O simulador completo está online no QR code. Obrigado!

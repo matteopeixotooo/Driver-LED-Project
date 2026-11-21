@@ -24,8 +24,12 @@
   }
 
   * { box-sizing: border-box; }
-  body {
+  html, body {
     margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+  }
+  body {
     font-family: var(--sans);
     background: var(--bg);
     color: var(--text);
@@ -223,8 +227,14 @@
     text-transform: uppercase;
   }
 
+  .table-wrap {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
   table {
     width: 100%;
+    min-width: 440px;
     border-collapse: collapse;
     font-size: 13px;
   }
@@ -318,6 +328,18 @@
     color: var(--muted);
     padding: 10px 20px 24px;
   }
+
+  @media (max-width: 680px) {
+    .hero { padding: 24px 14px 22px; }
+    .hero p { font-size: 14px; }
+    .hero-actions { width: 100%; }
+    .hero-actions .btn { flex: 1 1 auto; justify-content: center; min-height: 44px; font-size: 13.5px; }
+    .container { padding: 14px 12px 32px; gap: 14px; }
+    .panel-header, .panel-body { padding: 12px; }
+    .eq-box { font-size: 11.5px; padding: 10px; overflow-x: auto; }
+    .link-btn, .ctrl-btn { min-height: 40px; display: inline-flex; align-items: center; justify-content: center; }
+    .slide-controls { width: 100%; justify-content: space-between; }
+  }
 </style>
 </head>
 <body>
@@ -358,7 +380,7 @@
 
     <div class="nav-card">
       <div>
-        <span class="tag">DEFESA (13 SLIDES)</span>
+        <span class="tag">DEFESA (12 SLIDES)</span>
         <h2>Apresentação</h2>
         <p>Slides estruturados para apresentação de até 10 minutos, cobrindo planta, modelagem, projeto e resultados.</p>
       </div>
@@ -413,7 +435,7 @@
         </div>
       </div>
 
-      <div>
+      <div class="table-wrap">
         <table>
           <thead>
             <tr>
@@ -504,7 +526,7 @@
 </footer>
 
 <script>
-  const TOTAL_SLIDES = 13;
+  const TOTAL_SLIDES = 12;
   let currentSlide = 1;
 
   function renderSlide() {
@@ -525,6 +547,17 @@
     if (e.key === "ArrowRight") changeSlide(1);
     if (e.key === "ArrowLeft") changeSlide(-1);
   });
+
+  // Suporte a swipe em telas sensíveis ao toque
+  let touchStartX = null;
+  const frame = document.querySelector(".slide-frame");
+  frame.addEventListener("touchstart", (e) => { touchStartX = e.touches[0].clientX; }, { passive: true });
+  frame.addEventListener("touchend", (e) => {
+    if (touchStartX === null) return;
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    if (Math.abs(dx) > 40) changeSlide(dx < 0 ? 1 : -1);
+    touchStartX = null;
+  }, { passive: true });
 </script>
 </body>
 </html>
