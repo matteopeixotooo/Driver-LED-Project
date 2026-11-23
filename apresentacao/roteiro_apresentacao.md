@@ -24,11 +24,11 @@ Integrando a planta com passo Δt = τ_min/100 = 0,5 ms, a simulação confirma 
 
 ## Slide 6 — Especificações e Método (45 s)
 
-Defini quatro metas: erro zero, P.O. <= 5%, Ts <= 0,30 s e u entre 0 e 5 V. Escolhi a Segunda Maneira com o Método Polinomial da Aula 10: resolver a Equação Diofantina a(z)ℓ(z) + b(z)p(z) = a*(z) com modelo interno (z-1).
+Defini quatro metas: erro zero, P.O. <= 5%, Ts <= 0,30 s e u entre 0 e 5 V. Escolhi a Segunda Maneira com o Método Polinomial: resolver a Equação Diofantina a(z)ℓ(z) + b(z)p(z) = a*(z) com modelo interno (z-1).
 
 ## Slide 7 — Discretização ZOH (1 min)
 
-Seguindo a Aula 08, aplicamos a Equivalência do ZOH para h = τ_min/10 = 5 ms. Expandindo G(s)/s em frações parciais, encontramos A=4, B=2 e C=-6. Aplicando a Transformada Z e multiplicando por (z-1)/z, obtemos G(z) exata.
+Aplicando a Equivalência do ZOH para h = τ_min/10 = 5 ms e expandindo G(s)/s em frações parciais, encontramos A=4, B=2 e C=-6. Aplicando a Transformada Z e multiplicando por (z-1)/z, obtemos G(z) exata.
 
 ## Slide 8 — Equação Diofantina (1 min 15 s)
 

@@ -327,7 +327,7 @@ def s_modelagem(num, total):
 
 def s_analise_mf_sem_ctrl(num, total):
     fig, ax = novo_slide("Análise Analítica em Malha Fechada (sem controlador)", num, total, etapa=2,
-                         resumo="as contas da Aula 07 preveem exatamente o que ocorre na simulação: erro de 20% e P.O. ≈ 15%")
+                         resumo="a análise teórica (2ª ordem + Valor Final) prevê exatamente a simulação: erro de 20% e P.O. ≈ 15%")
 
     # Caixa esquerda: FT em malha fechada
     caixa(ax, 0.6, 1.32, 5.95, 4.3, fc=LIGHT)
@@ -399,7 +399,7 @@ def s_sem_controlador(d, num, total):
 
 def s_especificacoes(num, total):
     fig, ax = novo_slide("Especificações Desejadas e Escolha do Método", num, total, etapa=3,
-                         resumo="Segunda Maneira + Método Polinomial (Aula 10): projeta C(z) direto no plano z com integrador (z−1)")
+                         resumo="Segunda Maneira + Método Polinomial: projeta C(z) direto no plano z com integrador (z−1)")
 
     # Metas (esquerda)
     caixa(ax, 0.6, 1.32, 5.75, 4.28, fc=GREEN_LIGHT)
@@ -438,11 +438,11 @@ def s_especificacoes(num, total):
 
 def s_discretizacao_zoh(d, num, total):
     fig, ax = novo_slide("Discretização Exata da Planta via ZOH (h = 0,005 s)", num, total, etapa=3,
-                         resumo="usando a Equivalência do ZOH (Aula 08), convertemos G(s) para G(z) sem aproximações")
+                         resumo="pela Equivalência do ZOH (segurador de ordem zero), convertemos G(s) para G(z) sem aproximações")
 
     caixa(ax, 0.6, 1.28, 12.13, 4.35, fc=LIGHT)
 
-    ax.text(0.9, 5.25, "1. Fórmula da Equivalência do ZOH (Aula 08):", fontsize=13, weight="bold", color=NAVY)
+    ax.text(0.9, 5.25, "1. Fórmula da Equivalência do ZOH:", fontsize=13, weight="bold", color=NAVY)
     ax.text(7.2, 5.25, r"$G(z) = \dfrac{z-1}{z}\,\mathcal{Z}\left\{\mathcal{L}^{-1}\left[\dfrac{G(s)}{s}\right]_{t=kh}\right\}$",
             fontsize=14.5, va="center", color=ACC)
 
@@ -467,7 +467,7 @@ def s_diofantina(num, total):
 
     # Esquerda: Coprimalidade, Graus e a*(z)
     caixa(ax, 0.6, 1.28, 5.75, 4.35, fc=LIGHT)
-    ax.text(0.85, 5.28, "1. Coprimalidade e Graus (Teorema Aula 10)", fontsize=13, weight="bold", color=NAVY)
+    ax.text(0.85, 5.28, "1. Coprimalidade e Graus (Equação Diofantina)", fontsize=13, weight="bold", color=NAVY)
     ax.text(0.85, 4.82, "• Polos a(z): {0,9048; 0,9672}  ≠  Zero b(z): −0,9565 → coprimos", fontsize=10.8, color=TXT)
     ax.text(0.85, 4.38, "• Modelo Interno: $\\tilde{a}(z) = a(z)(z-1)$", fontsize=10.3, color=NAVY)
     ax.text(1.05, 4.08, r"$= z^3 - 2{,}872054\,z^2 + 2{,}747227\,z - 0{,}875173$", fontsize=10.0, color=NAVY)
@@ -689,9 +689,9 @@ ROTEIRO = [
      "erro de 20% (para em 2,40 V), overshoot de 15,24% e acomodação em 0,31 s."),
     ("Especificações e Método", "45 s",
      "Defini quatro metas: erro zero, P.O. <= 5%, Ts <= 0,30 s e u entre 0 e 5 V. Escolhi a Segunda Maneira com o "
-     "Método Polinomial da Aula 10: resolver a Equação Diofantina a(z)ℓ(z) + b(z)p(z) = a*(z) com modelo interno (z-1)."),
+     "Método Polinomial: resolver a Equação Diofantina a(z)ℓ(z) + b(z)p(z) = a*(z) com modelo interno (z-1)."),
     ("Discretização ZOH", "1 min",
-     "Seguindo a Aula 08, aplicamos a Equivalência do ZOH para h = τ_min/10 = 5 ms. Expandindo G(s)/s em frações parciais, "
+     "Aplicando a Equivalência do ZOH para h = τ_min/10 = 5 ms e expandindo G(s)/s em frações parciais, "
      "encontramos A=4, B=2 e C=-6. Aplicando a Transformada Z e multiplicando por (z-1)/z, obtemos G(z) exata."),
     ("Equação Diofantina", "1 min 15 s",
      "Verificamos que a(z) e b(z) são coprimos. Impondo ℓ(z)=(z-1)ℓ₂(z), ã(z) fica de grau 3, então com a*(z) de grau 4 "
