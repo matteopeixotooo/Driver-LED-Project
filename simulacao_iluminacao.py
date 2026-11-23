@@ -158,29 +158,31 @@ def simular_com_controlador(ref_func, t_total: float,
     x1, x2 = 0.0, 0.0
 
     idx = 0
-    for k in range(n_amostras):
-        t_amostra = k * H
-        y_medido = x1
-        r_atual = ref_func(t_amostra)
-        e_atual = r_atual - y_medido
+    u_atual = 0.0
+    for iteracao in range(n_passos):
+        t_atual = iteracao * DT
+        r_atual = ref_func(t_atual)
 
-        # Lei de controle discreta (equação a diferenças)
-        u_atual = (-ell1 * u_ant1 - ell0 * u_ant2
-                   + p2 * e_atual + p1 * e_ant1 + p0 * e_ant2)
+        # A rotina do controlador só é chamada a cada 10 iterações da planta (h = tau_min / 10)
+        if iteracao % PASSOS_POR_AMOSTRA == 0:
+            y_medido = x1
+            e_atual = r_atual - y_medido
 
-        # Atualização dos estados passados do controlador
-        u_ant2, u_ant1 = u_ant1, u_atual
-        e_ant2, e_ant1 = e_ant1, e_atual
+            # Lei de controle discreta (equação a diferenças)
+            u_atual = (-ell1 * u_ant1 - ell0 * u_ant2
+                       + p2 * e_atual + p1 * e_ant1 + p0 * e_ant2)
 
-        # ZOH: aplica u_atual constante por 10 passos de integração da planta
-        for _ in range(PASSOS_POR_AMOSTRA):
-            t_atual = idx * DT
-            t_hist[idx] = t_atual
-            r_hist[idx] = ref_func(t_atual)
-            y_hist[idx] = x1
-            u_hist[idx] = u_atual
-            x1, x2 = passo_rk4_planta(x1, x2, u_atual, DT)
-            idx += 1
+            # Atualização dos estados passados do controlador
+            u_ant2, u_ant1 = u_ant1, u_atual
+            e_ant2, e_ant1 = e_ant1, e_atual
+
+        # Mantém u_atual constante durante as 10 iterações da planta (Princípio do ZOH)
+        t_hist[idx] = t_atual
+        r_hist[idx] = r_atual
+        y_hist[idx] = x1
+        u_hist[idx] = u_atual
+        x1, x2 = passo_rk4_planta(x1, x2, u_atual, DT)
+        idx += 1
 
     return t_hist, r_hist, y_hist, u_hist
 
@@ -235,14 +237,15 @@ def salvar_figura_simulacao(caminho: str, titulo: str,
     ax2.grid(True, linestyle=":", alpha=0.65)
 
     if zoom_zoh:
-        ax2.set_ylim(-0.35, 5.6)
+        ax2.set_ylim(-0.35, max(5.6, float(np.max(u_hist)) * 1.12))
         ax2.legend(loc="upper left", bbox_to_anchor=(0.08, 0.88), frameon=True)
-        # Inset mostrando os degraus ZOH de duração h = 5 ms (10 passos dt)
-        ax_in = ax2.inset_axes([0.52, 0.31, 0.44, 0.48])
-        mascara = t_hist <= 0.06
+        # Inset mostrando os degraus ZOH de duração h = 5 ms (10 passos dt por pulso)
+        ax_in = ax2.inset_axes([0.52, 0.31, 0.44, 0.46])
+        mascara = t_hist <= 0.0451
         ax_in.step(t_hist[mascara], u_hist[mascara], where="post",
-                   color="#d62728", linewidth=1.4)
-        ax_in.set_title("Detalhe dos pulsos ZOH ($h = 5\\,\\mathrm{ms}$)", fontsize=8.5)
+                   color="#d62728", linewidth=1.5)
+        ax_in.plot(t_hist[mascara], u_hist[mascara], ".", color="#14305a", markersize=2.8)
+        ax_in.set_title("Pulsos ZOH ($h = 5\\,\\mathrm{ms} = 10\\,\\Delta t$)", fontsize=8.5)
         ax_in.set_xlabel("$t$ [s]", fontsize=8)
         ax_in.tick_params(labelsize=7.5)
         ax_in.grid(True, linestyle=":", alpha=0.6)
@@ -307,7 +310,7 @@ def main():
     salvar_figura_simulacao(
         "figuras/fig2_malha_fechada_tentativa1.png",
         "Malha Fechada com Controlador Polinomial — 1ª Tentativa (Antes do Ajuste Fino)",
-        t_t1, r_t1, y_t1, u_t1, zoom_zoh=False
+        t_t1, r_t1, y_t1, u_t1, zoom_zoh=True
     )
 
     # --------------------------------------------------------------------------
@@ -326,6 +329,12 @@ def main():
     print(f"y_final = {met_fin['y_final']:.5f} V | e_ss = {met_fin['ess_pct']:.4f}%")
     print(f"P.O. = {met_fin['po_ref_pct']:.2f}% | Ts(2%) = {met_fin['ts_2']:.4f} s")
     print(f"u_min = {np.min(u_fin):.4f} V | u_max = {np.max(u_fin):.4f} V | u_regime = {u_fin[-1]:.4f} V\n")
+
+    # Verificação explícita da regra ZOH: u só muda em múltiplos de 10 iterações
+    for u_serie in (u_t1, u_fin):
+        for bloco_idx in range(0, len(u_serie), PASSOS_POR_AMOSTRA):
+            bloco = u_serie[bloco_idx:bloco_idx + PASSOS_POR_AMOSTRA]
+            assert np.all(bloco == bloco[0]), "Erro: u variou dentro de um período de amostragem!"
 
     salvar_figura_simulacao(
         "figuras/fig3_malha_fechada_ajustado.png",

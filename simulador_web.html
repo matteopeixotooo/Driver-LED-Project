@@ -770,26 +770,27 @@ function simulateSystem(cfg, modeOverride = null) {
   const p2 = pPoly[0], p1 = pPoly[1], p0 = pPoly[2];
   let uAnt1 = 0, uAnt2 = 0, eAnt1 = 0, eAnt2 = 0;
 
-  let idx = 0;
-  for (let k = 0; k < nSamples; k++) {
-    const tSample = k * h;
-    const yMeas = x1 + distFn(tSample);
-    const r = refFn(tSample);
-    const e = r - yMeas;
-    let u = -ell1 * uAnt1 - ell0 * uAnt2 + p2 * e + p1 * eAnt1 + p0 * eAnt2;
-    u = clampU(u);
-    uAnt2 = uAnt1; uAnt1 = u;
-    eAnt2 = eAnt1; eAnt1 = e;
+  let u = 0;
+  for (let iter = 0; iter < nSteps; iter++) {
+    const t = iter * dt;
+    const r = refFn(t);
 
-    for (let s = 0; s < stepsPerSample; s++) {
-      const t = idx * dt;
-      tArr[idx] = t;
-      rArr[idx] = refFn(t);
-      yArr[idx] = x1 + distFn(t);
-      uArr[idx] = u;
-      [x1, x2] = rk4Step(x1, x2, u);
-      idx++;
+    // A rotina do controlador só é chamada a cada 10 iterações da planta (h = tau_min / 10)
+    if (iter % stepsPerSample === 0) {
+      const yMeas = x1 + distFn(t);
+      const e = r - yMeas;
+      u = -ell1 * uAnt1 - ell0 * uAnt2 + p2 * e + p1 * eAnt1 + p0 * eAnt2;
+      u = clampU(u);
+      uAnt2 = uAnt1; uAnt1 = u;
+      eAnt2 = eAnt1; eAnt1 = e;
     }
+
+    // Mantém u constante durante as 10 iterações da planta (Princípio do ZOH)
+    tArr[iter] = t;
+    rArr[iter] = r;
+    yArr[iter] = x1 + distFn(t);
+    uArr[iter] = u;
+    [x1, x2] = rk4Step(x1, x2, u);
   }
   return { tArr, rArr, yArr, uArr, dt, h, tauMin };
 }
@@ -1333,6 +1334,67 @@ function drawScope() {
   plotLine(res.tArr, res.rArr, yOf1, "#111111", 1.6, true, true);
   plotLine(res.tArr, res.yArr, yOf1, "#1f77b4", 2.5);
   plotLine(res.tArr, res.uArr, yOf2, "#c0392b", 2.0, false, true);
+
+  const isDigital = (currentMode !== "open_loop" && currentMode !== "closed_no_ctrl");
+  if (isDigital && zoomZOH) {
+    // Mostra os 10 pontos de integração da planta dentro de cada pulso ZOH
+    ctx.save();
+    ctx.fillStyle = "#14305a";
+    for (let i = 0; i < res.tArr.length; i++) {
+      if (res.tArr[i] > tViewMax) break;
+      ctx.beginPath();
+      ctx.arc(xOf(res.tArr[i]), yOf2(res.uArr[i]), 2.0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  } else if (isDigital && !zoomZOH && W >= 540) {
+    // Quadro de zoom ZOH automático no canto direito do gráfico u(t)
+    const tZoomEnd = Math.min(8 * res.h, tViewMax);
+    let uZMin = Infinity, uZMax = -Infinity;
+    for (let i = 0; i < res.tArr.length; i++) {
+      if (res.tArr[i] > tZoomEnd) break;
+      if (res.uArr[i] < uZMin) uZMin = res.uArr[i];
+      if (res.uArr[i] > uZMax) uZMax = res.uArr[i];
+    }
+    const span = Math.max(0.2, uZMax - uZMin);
+    uZMin -= span * 0.15;
+    uZMax += span * 0.15;
+    const bx = padL + plotW * 0.56, by = y2Top + 14;
+    const bw = plotW * 0.42, bh = Math.max(48, (y2Bot - y2Top) * 0.62);
+    ctx.save();
+    ctx.fillStyle = "rgba(255,255,255,0.95)";
+    ctx.strokeStyle = "#9aa5b1";
+    ctx.lineWidth = 1;
+    ctx.fillRect(bx, by, bw, bh);
+    ctx.strokeRect(bx, by, bw, bh);
+    ctx.fillStyle = "#14305a";
+    ctx.font = "700 10px sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText(`Pulsos ZOH (h=${(res.h*1000).toFixed(1)}ms = 10×Δt)`, bx + 6, by + 12);
+    const ix0 = bx + 8, iy0 = by + 18, iw = bw - 16, ih = bh - 24;
+    const ixOf = t => ix0 + (t / tZoomEnd) * iw;
+    const iyOf = v => iy0 + ih - ((v - uZMin) / (uZMax - uZMin)) * ih;
+    ctx.strokeStyle = "#c0392b";
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    let started = false, prevY = 0;
+    for (let i = 0; i < res.tArr.length; i++) {
+      if (res.tArr[i] > tZoomEnd) break;
+      const px = ixOf(res.tArr[i]), py = iyOf(res.uArr[i]);
+      if (!started) { ctx.moveTo(px, py); started = true; }
+      else { ctx.lineTo(px, prevY); ctx.lineTo(px, py); }
+      prevY = py;
+    }
+    ctx.stroke();
+    ctx.fillStyle = "#14305a";
+    for (let i = 0; i < res.tArr.length; i++) {
+      if (res.tArr[i] > tZoomEnd) break;
+      ctx.beginPath();
+      ctx.arc(ixOf(res.tArr[i]), iyOf(res.uArr[i]), 1.4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
 
   // Cursor / Probe
   if (hoverIdx !== null && hoverIdx >= 0 && hoverIdx < res.tArr.length && res.tArr[hoverIdx] <= tViewMax) {

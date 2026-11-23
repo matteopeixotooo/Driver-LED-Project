@@ -369,7 +369,7 @@ def s_sem_controlador(d, num, total):
     ax.text(0.6, 5.45, "Integração RK4 com Δt = τ_min/100 = 0,0005 s  |  u(t) = r(t) − y(t)  |  r = 3,0 V (300 lux)",
             fontsize=12, color=GRAY)
     ay, au = grafico_resposta(
-        fig, 1.25, 1.32, 6.9, 3.85,
+        fig, 1.25, 1.68, 6.9, 3.55,
         [(t, r, dict(color="black", ls="--", lw=1.6, label="referência r(t)")),
          (t, y, dict(color=ACC, lw=2.6, label="saída y(t)"))],
         [(t, u, dict(color=RED, lw=2.0))])
@@ -522,17 +522,18 @@ def s_algoritmo(d, num, total):
 
     caixa(ax, 0.6, 1.28, 7.1, 2.38, fc="#1C222B", r=0.12)
     codigo = (
-        "// Parametros: h=0.005s, ell1=-1.800410, ell0=0.800410\n"
-        "//             p2=0.785669, p1=-1.469869, p0=0.686831\n"
-        "while (loop) {              // a cada h = tau_min/10 = 5 ms\n"
-        "   y = vin1();   e = r - y;\n"
-        "   u = -ell1*u1 - ell0*u2 + p2*e + p1*e1 + p0*e2;\n"
-        "   u2 = u1; u1 = u;  e2 = e1; e1 = e;\n"
-        "   vout1(u);                // mantem por 10 iteracoes dt (ZOH)\n"
+        "// dt = tau_min/100 = 0,5 ms  |  h = tau_min/10 = 5 ms\n"
+        "for (iter = 0; iter < N_passos; iter++) {\n"
+        "  if (iter % 10 == 0) {     // chama controlador a cada 10x\n"
+        "    e = r - x1;\n"
+        "    u = -ell1*u1 - ell0*u2 + p2*e + p1*e1 + p0*e2;\n"
+        "    u2 = u1; u1 = u;  e2 = e1; e1 = e;\n"
+        "  }\n"
+        "  x1, x2 = rk4_planta(x1, x2, u, dt); // u constante (ZOH)\n"
         "}"
     )
-    ax.text(0.85, 3.44, codigo, family="DejaVu Sans Mono", fontsize=10.6, color="#E6EDF3", va="top",
-            linespacing=1.4)
+    ax.text(0.85, 3.50, codigo, family="DejaVu Sans Mono", fontsize=10.3, color="#E6EDF3", va="top",
+            linespacing=1.35)
 
     # Direita: ZOH
     caixa(ax, 7.95, 1.28, 4.78, 4.35, fc=LIGHT)
@@ -562,12 +563,22 @@ def s_com_controlador(d, num, total):
 
     ax.text(0.6, 5.45, "Comparação direta para o mesmo degrau r = 3,0 V (300 lux):", fontsize=12.5, color=GRAY)
     ay, au = grafico_resposta(
-        fig, 1.25, 1.32, 6.9, 3.85,
+        fig, 1.25, 1.68, 6.9, 3.55,
         [(ts, rs, dict(color="black", ls="--", lw=1.6, label="referência")),
          (ts, ysc, dict(color="#AAB4BF", lw=2.0, label="sem controlador")),
          (tc, ycc, dict(color=ACC, lw=2.8, label="com controlador"))],
-        [(ts, usc, dict(color="#AAB4BF", lw=1.6)), (tc, ucc, dict(color=RED, lw=2.0))])
+        [(ts, usc, dict(color="#AAB4BF", lw=1.6)), (tc, ucc, dict(color=RED, lw=2.0))],
+        ylim_u=(-0.3, 6.3))
     ay.legend(loc="lower right", frameon=False, fontsize=10.5)
+
+    # Inset ZOH direto no gráfico de u(t) (posicionado entre u=0,75V e limite=5V)
+    az = au.inset_axes([0.46, 0.25, 0.50, 0.42])
+    mz = tc <= 0.0401
+    az.plot(tc[mz] * 1000.0, ucc[mz], drawstyle="steps-post", color=RED, lw=1.5)
+    az.plot(tc[mz] * 1000.0, ucc[mz], ".", color=NAVY, ms=2.2)
+    az.set_title("Pulsos ZOH (h = 5 ms = 10×Δt)", fontsize=7.8, color=NAVY, pad=2)
+    az.tick_params(labelsize=6.5, pad=1)
+    az.grid(True, color="#E3E8EE", lw=0.6)
 
     x0, y0, w0, h0 = 8.55, 1.32, 4.18, 4.3
     caixa(ax, x0, y0, w0, h0, fc=LIGHT)
@@ -604,7 +615,7 @@ def s_ajuste(d, num, total):
     m1, mc = d["m_t1"], d["m_cc"]
 
     ay, au = grafico_resposta(
-        fig, 1.25, 1.32, 6.9, 4.1,
+        fig, 1.25, 1.68, 6.9, 3.75,
         [(t1, r1, dict(color="black", ls="--", lw=1.6, label="referência")),
          (t1, y1, dict(color=ORANGE, lw=2.2, label="1ª tentativa (−18, −30)")),
          (tc, yc, dict(color=ACC, lw=2.6, label="final (−10, −25)"))],
